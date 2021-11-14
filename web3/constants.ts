@@ -33,8 +33,8 @@ export const routerAddresses: Record<string, string> = {
 }
 
 export const wrappedNatives: Record<string, string> = {
-  "250": "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
-  "66": "0x8f8526dbfd6e38e3d8307702ca8469bae6c56c15",
+  "250": "21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
+  "66": "8f8526dbfd6e38e3d8307702ca8469bae6c56c15",
 }
 
 export enum ProvidersUrl {

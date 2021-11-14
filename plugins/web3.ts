@@ -82,7 +82,7 @@ async function makeSwapEvm(params: RelaySwapData): Promise<string> {
   const valueToSend = new TokenAmount(value, 18, false).toWei().toString();
   console.log(valueToSend);
   const receiveTokenAddress = hexToBytes(wrappedNatives[destination]);
-  const bytes = hexToBytes(addressTo).concat(receiveTokenAddress)
+  const bytes = hexToBytes(addressTo.substring(2)).concat(receiveTokenAddress)
   //@ts-ignore
   const contractAddress = routerAddresses[chainId]
   const web3 = createMetamaskInstance()
