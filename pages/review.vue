@@ -118,7 +118,8 @@ const logos: { [key in Chains]: string } = {
   [Chains.Xdai]: require('~/assets/img/logotypes/xdai.svg'),
   [Chains.Heco]: require('~/assets/img/logotypes/huobi.svg'),
   [Chains.Avax]: require('~/assets/img/logotypes/huobi.svg'),
-  [Chains.Sol]: require('~/assets/img/logotypes/solana.svg'),
+  // [Chains.Sol]: require('~/assets/img/logotypes/solana.svg'),
+  [Chains.Okex]: require('~/assets/img/logotypes/okex.png'),
 }
 
 export default Vue.extend({
@@ -152,7 +153,7 @@ export default Vue.extend({
     async makeSwap() {
       this.processing = true;
       const txnId = await this.$web3.makeSwap(this.fromToken.type, {
-        destination: chainToName[this.toToken.chain],
+        destination: this.toToken.chain,
         userAddress: this.preview.fromAddress,
         addressTo: this.preview.toAddress,
         value: this.preview.amountFrom,

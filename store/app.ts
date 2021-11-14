@@ -3,16 +3,16 @@ import { WalletProvider } from '~/components/utils'
 
 export const state = () => ({
   modalData: {
-    [WalletProvider.Phantom]: {
-      index: '1', // Индекс для перерисовки одного и того же модального окна
-      name: 'connect-wallet', // Уникальное название модального окна
-      data: {
-        label: 'Connect to Phantom',
-        img: require('~/assets/img/icons/phantom.svg'),
-        provider: WalletProvider.Phantom,
-        connected: false,
-      },
-    },
+    // [WalletProvider.Phantom]: {
+    //   index: '1', // Индекс для перерисовки одного и того же модального окна
+    //   name: 'connect-wallet', // Уникальное название модального окна
+    //   data: {
+    //     label: 'Connect to Phantom',
+    //     img: require('~/assets/img/icons/phantom.svg'),
+    //     provider: WalletProvider.Phantom,
+    //     connected: false,
+    //   },
+    // },
     [WalletProvider.Metamask]: {
       index: '2', // Индекс для перерисовки одного и того же модального окна
       name: 'connect-wallet', // Уникальное название модального окна

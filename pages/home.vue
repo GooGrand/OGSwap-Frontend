@@ -82,15 +82,8 @@
             <field-label>From address</field-label>
             <label class="relative block">
               <img
-                v-show="!isFromSolana"
                 class="w-[24px] h-[24px] left-[12px] top-[9px] absolute"
                 src="~/assets/img/icons/metamask.svg"
-                alt=""
-              />
-              <img
-                v-show="isFromSolana"
-                class="w-[24px] h-[24px] left-[12px] top-[9px] absolute"
-                src="~/assets/img/icons/phantom.svg"
                 alt=""
               />
               <field-input
@@ -103,7 +96,7 @@
           </div>
           <div
             class="px-[6px] w-[162px] flex items-end"
-            v-if="!isFromSolana && !isMetamaskAvailable"
+            v-if="!isMetamaskAvailable"
           >
             <btn
               :variant="connected ? 'dark-charcoal' : 'blood'"
@@ -115,19 +108,7 @@
           </div>
           <div
             class="px-[6px] w-[162px] flex items-end"
-            v-else-if="isFromSolana && !isPhantomAvailable"
-          >
-            <btn
-              block
-              :variant="connected ? 'dark-charcoal' : 'blood'"
-              @click="connected ? false : handleConnectWallet()"
-            >
-              <span> Connect Phantom </span>
-            </btn>
-          </div>
-          <div
-            class="px-[6px] w-[162px] flex items-end"
-            v-else-if="!isFromSolana && sendTokenChain != currentChain"
+            v-else-if="currentTokenSend.chain != currentChain"
           >
             <btn
               block
@@ -218,15 +199,8 @@
             <field-label>To address</field-label>
             <label class="relative block">
               <img
-                v-show="!isToSolana"
                 class="w-[24px] h-[24px] left-[12px] top-[9px] absolute"
                 src="~/assets/img/icons/metamask.svg"
-                alt=""
-              />
-              <img
-                v-show="isToSolana"
-                class="w-[24px] h-[24px] left-[12px] top-[9px] absolute"
-                src="~/assets/img/icons/phantom.svg"
                 alt=""
               />
               <field-input
@@ -238,9 +212,6 @@
           </div>
           <div
             class="px-[6px] w-[162px] flex items-end"
-            v-show="
-              isFromSolana === isToSolana || !isFromSolana === !isToSolana
-            "
           >
             <btn variant="blood" block @click="addressTo = addressFrom">
               Use the same address
@@ -271,6 +242,7 @@ import {
   destinationTokens,
   RelayToken,
   Chains,
+  chainToTokenName
 } from '~/components/constants'
 import { WalletBody } from '~/store/types'
 import { getTokenById, tokenPrices } from '~/utils/oracle'
@@ -283,21 +255,11 @@ import {
   BSC_PROVIDER_URL,
   FANTOM_PROVIDER_URL,
   MAINNET_INFURA_URL,
+  OKEX_PROVIDER_URL,
   POLYGON_PROVIDER_URL,
-  HECO_PROVIDER_URL,
-  AVAX_PROVIDER_URL,
   XDAI_PROVIDER_URL,
 } from '~/web3/constants'
-const chainToTokenName: { [key in Chains]: string } = {
-  [Chains.Eth]: 'ETH',
-  [Chains.Pol]: 'MATIC',
-  [Chains.Ftm]: 'FTM',
-  [Chains.Bsc]: 'BNB',
-  [Chains.Heco]: 'HT',
-  [Chains.Xdai]: 'XDAI',
-  [Chains.Sol]: 'SOL',
-  [Chains.Avax]: 'AVAX',
-}
+
 const chainNames: { [key in Chains]: string } = {
   [Chains.Eth]: 'Ethereum',
   [Chains.Pol]: 'Polygon',
@@ -306,7 +268,8 @@ const chainNames: { [key in Chains]: string } = {
   [Chains.Xdai]: 'xDai',
   [Chains.Heco]: 'Heco',
   [Chains.Avax]: 'Avalanche',
-  [Chains.Sol]: 'Solana',
+  // [Chains.Sol]: 'Solana',
+  [Chains.Okex]: 'OKExChain',
 }
 
 const invoker = new Web3Invoker()
@@ -372,11 +335,7 @@ export default Vue.extend({
       return Number(this.amount) > limits[this.sendTokenChain];
     },
     isValidChain(): boolean {
-      if(this.isFromSolana) {
-        return this.isPhantomAvailable;
-      } else {
-        return this.isMetamaskAvailable && this.sendTokenChain == this.currentChain
-      }
+      return this.isMetamaskAvailable && this.sendTokenChain == this.currentChain
     },
     currentTokenSend(): RelayToken {
       return originTokens[this.sendTokenIndex]
@@ -384,20 +343,11 @@ export default Vue.extend({
     currentTokenReceive(): RelayToken {
       return destinationTokens[this.receiveTokenIndex]
     },
-    isFromSolana(): boolean {
-      return this.currentTokenSend.chain === Chains.Sol
-    },
-    isToSolana(): boolean {
-      return this.currentTokenReceive.chain === Chains.Sol
-    },
-    metamaskWallet(): WalletBody {
+    currentWallet(): WalletBody {
       return this.$store.getters['wallet/walletByName'](WalletProvider.Metamask)
     },
     phantomWallet(): WalletBody {
       return this.$store.getters['wallet/walletByName'](WalletProvider.Phantom)
-    },
-    currentWallet(): WalletBody {
-      return this.isFromSolana ? this.phantomWallet : this.metamaskWallet
     },
     addressFrom(): string | null {
       if (!this.currentWallet) return null
@@ -424,12 +374,9 @@ export default Vue.extend({
     // достаем все данные из стора и начинаем проверку данных по последним изменениям баланса
   },
   watch: {
-    async metamaskWallet() {
+    async currentWallet() {
       await this.setChain()
       await this.setMMBalances()
-    },
-    async phantomWallet() {
-      await this.setPhBalance()
     },
   },
   methods: {
@@ -439,20 +386,11 @@ export default Vue.extend({
       }
     },
     async setBalances() {
-      if (this.metamaskWallet) await this.setMMBalances()
-      if (this.phantomWallet) await this.setPhBalance()
-    },
-    async setPhBalance() {
-      if (!this.phantomWallet) return
-      const amount = new TokenAmount(
-        await invoker.getSolBalance(this.phantomWallet.address),
-        9
-      )
-      this.$set(this.balances, Chains.Sol, amount)
+      if (this.currentWallet) await this.setMMBalances()
     },
     async setMMBalances() {
-      if (!this.metamaskWallet) return
-      const address = this.metamaskWallet.address
+      if (!this.currentWallet) return
+      const address = this.currentWallet.address
       this.$set(
         this.balances,
         Chains.Eth,
@@ -486,6 +424,13 @@ export default Vue.extend({
         Chains.Xdai,
         new TokenAmount(
           await invoker.getChainBalance(XDAI_PROVIDER_URL, address)
+        )
+      )
+      this.$set(
+        this.balances,
+        Chains.Okex,
+        new TokenAmount(
+          await invoker.getChainBalance(OKEX_PROVIDER_URL, address)
         )
       )
     },
@@ -531,51 +476,12 @@ export default Vue.extend({
       this.amountReceive = (
         currentPrice / this.prices[this.receiveTokenChain]
       ).toFixed(4)
-      // let gtonAmount
-      // if (this.isFromSolana) {
-      //   gtonAmount = getSwapOutAmount(
-      //     gtonPoolInfo,
-      //     NATIVE_SOL.mintAddress,
-      //     GTON.mintAddress,
-      //     String(this.amount),
-      //     0.5
-      //   )
-      //     .amountOutWithSlippage.toEther()
-      //     .toNumber()
-      // } else {
-
-      //   gtonAmount = this.reservesFrom ?
-      //     this.reservesFrom.
-      //       gtonReserve.toEther()
-      //       .dividedBy(this.reservesFrom.nativeReserve.toEther())
-      //       .toNumber() * Number(this.amount) : 1
-      // }
-      // if (this.isToSolana) {
-      //   this.amountReceive = getSwapOutAmount(
-      //     gtonPoolInfo,
-      //     GTON.mintAddress,
-      //     NATIVE_SOL.mintAddress,
-      //     String(gtonAmount),
-      //     0.5
-      //   )
-      //     .amountOutWithSlippage.toEther()
-      //     .toFixed()
-      // } else {
-      //   this.amountReceive = this.reservesTo ? (
-      //     this.reservesTo.nativeReserve
-      //       .toEther()
-      //       .dividedBy(this.reservesTo.gtonReserve.toEther())
-      //       .toNumber() * gtonAmount
-      //   ).toFixed(2) : gtonAmount.toFixed(2)
-      // }
     },
     setMax() {
       this.amount = this.currentChainTokenBalance
     },
     handleConnectWallet() {
-      const provider = this.isFromSolana
-        ? WalletProvider.Phantom
-        : WalletProvider.Metamask
+      const provider = WalletProvider.Metamask
       // Deep copy object
       const modal = JSON.parse(
         JSON.stringify(this.$store.getters['app/getModal'](provider))
