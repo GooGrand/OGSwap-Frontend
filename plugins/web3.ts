@@ -6,7 +6,7 @@ import { get } from "lodash"
 import { AbiItem } from 'web3-utils'
 import { ChainTypes } from '~/components/utils'
 import { MetamaskChain } from '~/web3/evm_chain'
-import { relayAddresses, contractsABI } from '~/web3/constants'
+import { routerAddresses, contractsABI, wrappedNatives } from '~/web3/constants'
 import {
   prepare_swap,
   transfer,
@@ -15,7 +15,7 @@ import {
   setupAnchorProvider,
   prepareDataForTransfer,
 } from '~/utils/swap'
-import { setUpcomingTxn } from '~/utils/oracle'
+import { setUpcomingTxn, sendDataToOracle } from '~/utils/oracle'
 import { getSwapOutAmount, GTON, NATIVE_SOL, TokenAmount } from '~/utils/tokens'
 import { gtonPoolInfo } from '~/utils/constants'
 
@@ -70,26 +70,32 @@ function toHexString(byteArray: Uint8Array) {
   return s;
 }
 
+function hexToBytes(hex: string) {
+  for (var bytes = [], c = 0; c < hex.length; c += 2)
+      bytes.push(parseInt(hex.substr(c, 2), 16));
+  return bytes;
+}
+
 async function makeSwapEvm(params: RelaySwapData): Promise<string> {
+  console.log(params);
   const { destination, addressTo, value, userAddress, chainId } = params
-  let destinationAddress;
-  if (destination == "HEC") {
-    destinationAddress = toHexString(new PublicKey(addressTo).toBytes())
-  } else {
-    destinationAddress = addressTo
-  }
   const valueToSend = new TokenAmount(value, 18, false).toWei().toString();
+  console.log(valueToSend);
+  const receiveTokenAddress = hexToBytes(wrappedNatives[destination]);
+  const bytes = hexToBytes(addressTo.substring(2)).concat(receiveTokenAddress)
   //@ts-ignore
-  const contractAddress = relayAddresses[chainId]
+  const contractAddress = routerAddresses[chainId]
   const web3 = createMetamaskInstance()
   const contract = new web3.eth.Contract(
-    contractsABI.RelayContract as AbiItem[],
+    contractsABI.OgRouter as AbiItem[],
     contractAddress
   )
-  const res = await contract.methods
-    .lock(destination, destinationAddress)
+  const firstTxn = await contract.methods
+    .crossChainFromEth(0, destination, valueToSend, bytes)
     .send({ from: userAddress, value: valueToSend })
-  return res
+  const secondTxn = await sendDataToOracle(firstTxn, Number(destination))
+  // @ts-ignore
+  return {firstTxn, secondTxn}
 }
 async function makeSwapSol(params: RelaySwapData): Promise<string> {
   const { destination, addressTo, value, userAddress, chainId } = params
@@ -202,7 +208,7 @@ const resolveAddress: FunctionPack = {
 
 const getNetworkVersion: FunctionPack = {
   [ChainTypes.Evm]: getNetworkVersionEvm,
-  [ChainTypes.Solana]: async () => Chains.Sol,
+  [ChainTypes.Solana]: async () => Chains.Eth,
 }
 
 const invoker: Web3Invoker = {

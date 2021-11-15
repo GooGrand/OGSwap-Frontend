@@ -6,6 +6,7 @@ import {
   MAINNET_INFURA_URL,
   POLYGON_PROVIDER_URL,
   XDAI_PROVIDER_URL,
+  OKEX_PROVIDER_URL
 } from '~/web3/constants'
 import { ChainTypes } from '~/components/utils'
 
@@ -18,7 +19,20 @@ export enum Chains { // Надо заменить айдишники на наз
   Heco = '128',
   Avax = '43114',
   Pol = '137',
-  Sol = '-1',
+  // Sol = '-1',
+  Okex = '66',
+}
+
+export const chainToTokenName: { [key in Chains]: string } = {
+  [Chains.Eth]: 'ETH',
+  [Chains.Pol]: 'MATIC',
+  [Chains.Ftm]: 'FTM',
+  [Chains.Bsc]: 'BNB',
+  [Chains.Heco]: 'HT',
+  [Chains.Xdai]: 'XDAI',
+  // [Chains.Sol]: 'SOL',
+  [Chains.Avax]: 'AVAX',
+  [Chains.Okex]: 'OKT',
 }
 
 export const limits: Record<string, number> = {
@@ -29,7 +43,7 @@ export const limits: Record<string, number> = {
   [Chains.Heco]: 0.74, // 747630800000000000
   [Chains.Xdai]: 10.0, //10002986200000000000
   [Chains.Avax]: 0.22, //224775200000000000
-  [Chains.Sol]: 0.62, // Will add limit for solana?
+  // [Chains.Sol]: 0.62, // Will add limit for solana?
 }
 
 interface Status {
@@ -99,14 +113,14 @@ const XDAI = {
   title: 'XDAI',
   decimals: 18,
 }
-const SOL = {
-  type: ChainTypes.Solana,
-  relayTokenIndex: 7,
-  chain: Chains.Sol,
-  img: require('~/assets/img/icons/sol.svg'),
-  title: 'SOL',
-  decimals: 9,
-}
+// const SOL = {
+//   type: ChainTypes.Solana,
+//   relayTokenIndex: 7,
+//   chain: Chains.Sol,
+//   img: require('~/assets/img/icons/sol.svg'),
+//   title: 'SOL',
+//   decimals: 9,
+// }
 const HT = {
   type: ChainTypes.Evm,
   relayTokenIndex: 6,
@@ -123,9 +137,17 @@ const AVAX = {
   title: 'AVAX',
   decimals: 18,
 }
-export const originTokens: RelayToken[] = [MATIC, FTM, BNB, ETH, XDAI, SOL]
+const OKT = {
+  type: ChainTypes.Evm,
+  relayTokenIndex: 8,
+  chain: Chains.Okex,
+  img: require('~/assets/img/icons/okex.svg'),
+  title: 'OKT',
+  decimals: 18,
+}
+export const originTokens: RelayToken[] = [MATIC, FTM, BNB, ETH, XDAI, OKT]
 
-export const destinationTokens: RelayToken[] = [MATIC, FTM, BNB, XDAI, SOL]
+export const destinationTokens: RelayToken[] = [MATIC, FTM, BNB, XDAI, OKT]
 
 export const tokens = {
   [Chains.Avax]: AVAX,
@@ -134,8 +156,9 @@ export const tokens = {
   [Chains.Bsc]: BNB,
   [Chains.Pol]: MATIC,
   [Chains.Heco]: HT,
-  [Chains.Sol]: SOL,
+  // [Chains.Sol]: SOL,
   [Chains.Xdai]: XDAI,
+  [Chains.Okex]: OKT,
 }
 
 export type ChainMap = {
@@ -145,7 +168,6 @@ export type ChainMap = {
 type ExplorerApiData = {
   [key in Chains]: string
 }
-
 export const chainToName: ChainMap = {
   [Chains.Pol]: 'PLG',
   [Chains.Ftm]: 'FTM',
@@ -154,8 +176,9 @@ export const chainToName: ChainMap = {
   [Chains.Xdai]: 'DAI',
   [Chains.Heco]: 'HEC',
   [Chains.Avax]: 'AVA',
-  [Chains.Sol]: 'HEC',
+  [Chains.Okex]: 'OKT',
 }
+
 export const explorers: ChainMap = {
   [Chains.Pol]: 'https://polygonscan.com/tx/',
   [Chains.Ftm]: 'https://ftmscan.com/tx/',
@@ -164,7 +187,7 @@ export const explorers: ChainMap = {
   [Chains.Avax]: 'https://cchain.explorer.avax.network/tx/',
   [Chains.Xdai]: 'https://blockscout.com/xdai/mainnet/tx/',
   [Chains.Heco]: 'https://hecoinfo.com/tx/',
-  [Chains.Sol]: 'https://explorer.solana.com/',
+  [Chains.Okex]: 'https://www.oklink.com/okexchain',
 }
 export const chainProviderUrls: ExplorerApiData = {
   [Chains.Pol]: POLYGON_PROVIDER_URL,
@@ -173,6 +196,6 @@ export const chainProviderUrls: ExplorerApiData = {
   [Chains.Xdai]: XDAI_PROVIDER_URL,
   [Chains.Eth]: MAINNET_INFURA_URL,
   [Chains.Heco]: HECO_PROVIDER_URL,
-  [Chains.Avax]: AVAX_PROVIDER_URL,
-  [Chains.Sol]: AVAX_PROVIDER_URL, /// change this url
+  [Chains.Avax]: OKEX_PROVIDER_URL,
+  [Chains.Okex]: AVAX_PROVIDER_URL,
 }

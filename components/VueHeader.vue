@@ -47,11 +47,6 @@
           :val="metamask"
           :wallet="1"
         />
-        <wallet
-          :img="require('~/assets/img/icons/phantom.svg')"
-          :val="phantom"
-          :wallet="2"
-        />
       </div>
     </div>
   </header>

@@ -1,6 +1,7 @@
 import RelayContract from './abi/relay_contract.json'
 import ERC20ABI from './abi/erc20.json'
 import LpContractV2 from './abi/lpContractv2.json'
+import OgRouter from './abi/OgRouter.json'
 import RelayProgram from './idl/relay.json'
 
 export const contractsAddresses: Record<string, string> = {
@@ -26,6 +27,16 @@ export const relayAddresses: Record<string, string> = {
   '100': '0xbba98ea00ab995a467e9afabbb15dbddd29e1f44',
 }
 
+export const routerAddresses: Record<string, string> = {
+  "250": "0x577ee80a81ee9670B64614e5D5BE5cB21350eB38",
+  "66": "0x577ee80a81ee9670B64614e5D5BE5cB21350eB38",
+}
+
+export const wrappedNatives: Record<string, string> = {
+  "250": "21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
+  "66": "8f8526dbfd6e38e3d8307702ca8469bae6c56c15",
+}
+
 export enum ProvidersUrl {
   // FANTOM_PROVIDER_URL = 'https://rpc.ftm.tools',
   FANTOM_PROVIDER_URL = 'https://apis.ankr.com/c3f382db4c55497b81bf3feb1e9a8499/d37735e535d9d051230799cae45aeb6a/fantom/full/main',
@@ -44,6 +55,7 @@ export const POLYGON_PROVIDER_URL =
 export const HECO_PROVIDER_URL = 'https://http-mainnet.hecochain.com'
 export const AVAX_PROVIDER_URL = 'https://api.avax.network/ext/bc/C/rpc'
 export const XDAI_PROVIDER_URL = 'https://dai.poa.network'
+export const OKEX_PROVIDER_URL = 'https://exchainrpc.okex.org'
 
 export const MAINNET_INFURA_URL =
   'https://mainnet.infura.io/v3/ec6afadb1810471dbb600f24b86391d2'
@@ -54,6 +66,7 @@ export const contractsABI = {
   RelayContract,
   ERC20ABI,
   LpContractV2,
+  OgRouter
 }
 
 export const programIdls = {
