@@ -32,7 +32,6 @@ export const actions: ActionTree<State, any> = {
       const id = state.transactions.length - 1
       resolve(id); // resolve undefined
     });
-    // return commit("create", {txn: cloneDeep(state.preview)})
   }
 }
 

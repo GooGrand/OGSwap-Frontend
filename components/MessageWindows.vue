@@ -7,7 +7,7 @@
       :txn="item"
       :collapsed="index !== indexOpen"
       @collapse="handleCollapse(index)"
-      :completed="item.firstTxnHash && secondTxnHash"
+      :completed="item.firstTxnHash && item.secondTxnHash"
       @close="deleteTxn(index)"
     >
       <div class="mb-[18px] flex justify-center pt-[5px]">

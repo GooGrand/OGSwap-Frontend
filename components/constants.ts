@@ -190,9 +190,6 @@ export type ChainMap = {
   [key in Chains]: string
 }
 
-type ExplorerApiData = {
-  [key in Chains]: string
-}
 export const chainToName: ChainMap = {
   [Chains.Pol]: 'PLG',
   [Chains.Ftm]: 'FTM',
@@ -212,15 +209,5 @@ export const explorers: ChainMap = {
   [Chains.Avax]: 'https://cchain.explorer.avax.network/tx/',
   [Chains.Xdai]: 'https://blockscout.com/xdai/mainnet/tx/',
   [Chains.Heco]: 'https://hecoinfo.com/tx/',
-  [Chains.Okex]: 'https://www.oklink.com/okexchain',
-}
-export const chainProviderUrls: ExplorerApiData = {
-  [Chains.Pol]: POLYGON_PROVIDER_URL,
-  [Chains.Ftm]: FANTOM_PROVIDER_URL,
-  [Chains.Bsc]: BSC_PROVIDER_URL,
-  [Chains.Xdai]: XDAI_PROVIDER_URL,
-  [Chains.Eth]: MAINNET_INFURA_URL,
-  [Chains.Heco]: HECO_PROVIDER_URL,
-  [Chains.Avax]: OKEX_PROVIDER_URL,
-  [Chains.Okex]: AVAX_PROVIDER_URL,
+  [Chains.Okex]: 'https://www.oklink.com/okexchain/tx/',
 }

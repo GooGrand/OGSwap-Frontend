@@ -94,8 +94,8 @@
 <script lang="ts">
 import { Transaction, emptyPreview } from '~/utils/transactions'
 import Vue, { PropType } from 'vue'
-import { Chains, chainProviderUrls } from './constants'
-import { relayAddresses } from '~/web3/constants'
+import { sendDataToOracle } from '~/utils/oracle'
+import { relayAddresses, chainProviderUrls } from '~/web3/constants'
 import { Web3Invoker } from '~/web3/metamask'
 import _ from 'lodash'
 
@@ -135,60 +135,59 @@ export default Vue.extend({
     },
     txn(): Transaction {
       return this.$store.getters['transactions/getTransaction'](this.txnindex)
+    },
+    firstHash(): string | null {
+      return this.txn.firstTxnHash
+    }
+  },
+  watch: {
+    async firstHash() {
+      await this.watchEvm();
     }
   },
   methods: {
     async watchEvm() {
-      const address = this.txn.toAddress
-      const balance = await invoker.getChainBalance(this.nodeUrl, address)
-      if (balance <= this.txn.lastBalance) {
-        this.$store.commit('transactions/update', {
-          txnindex: this.txnindex,
-          body: { lastBalance: balance },
-        })
-        return
-      }
-
-      const { hash, block } = await invoker.checkForTransaction(
-        this.txn.lastBlock,
-        this.nodeUrl,
-        address,
-        this.fromAddress
+      if (!this.txn.firstTxnHash) return
+      const secondTxnHash = await sendDataToOracle(
+        this.txn.firstTxnHash,
+        Number(this.txn.chainFrom)
       )
-      if (_.isNil(hash)) {
-        this.$store.commit('transactions/update', {
-          txnindex: this.txnindex,
-          body: { secondTxnHash: hash },
-        })
-        if (!_.isNil(this.watcher)) clearInterval(this.watcher)
-      } else {
-        this.$store.commit('transactions/update', {
-          txnindex: this.txnindex,
-          body: { lastBlock: block },
-        })
-      }
-    },
-    async watchSol() {
-      if (!this.txn.gtonAmount) return
-      const res = await fetch(serviceUrl + this.txn.gtonAmount)
-      //...
+      this.$store.commit('transactions/update', {
+        txnIndex: this.txnindex,
+        body: { secondTxnHash },
+      })
+      // const address = this.txn.toAddress
+      // const balance = await invoker.getChainBalance(this.nodeUrl, address)
+      // if (balance <= this.txn.lastBalance) {
+      //   this.$store.commit('transactions/update', {
+      //     txnindex: this.txnindex,
+      //     body: { lastBalance: balance },
+      //   })
+      //   return
+      // }
+
+      // const { hash, block } = await invoker.checkForTransaction(
+      //   this.txn.lastBlock,
+      //   this.nodeUrl,
+      //   address,
+      //   this.fromAddress
+      // )
+      // if (_.isNil(hash)) {
+      //   this.$store.commit('transactions/update', {
+      //     txnindex: this.txnindex,
+      //     body: { secondTxnHash: hash },
+      //   })
+      //   if (!_.isNil(this.watcher)) clearInterval(this.watcher)
+      // } else {
+      //   this.$store.commit('transactions/update', {
+      //     txnindex: this.txnindex,
+      //     body: { lastBlock: block },
+      //   })
+      // }
     },
   },
-  created() {
-    if (this.txn.chainTo == Chains.Sol) {
-      const fn = async () => {
-        await this.watchSol()
-      }
-      this.watcher = setInterval(fn.bind(this), 4000)
-    } else {
-      const fn = async () => {
-        await this.watchEvm()
-      }
-      this.watcher = setInterval(fn.bind(this), 4000)
-    }
-  },
-  beforeDestroy() {
-    if (!_.isNil(this.watcher)) clearInterval(this.watcher)
+  async mounted() {
+    await this.watchEvm()
   },
 })
 </script>
