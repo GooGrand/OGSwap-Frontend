@@ -264,7 +264,7 @@
             <li class="mb-[25px] md:mb-0 md:h-[90px]">
               <span>
                 <img
-                  src="~/assets/img/landing/logos/okexchain.png"
+                  src="~/assets/img/landing/logos/okexchain.svg"
                   alt="Okex"
                   width="136"
                   height="34"
