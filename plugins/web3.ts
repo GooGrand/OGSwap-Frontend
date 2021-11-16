@@ -1,10 +1,10 @@
 import { Connection, PublicKey } from '@solana/web3.js'
 import { Plugin } from '@nuxt/types'
-import { Chains } from '~/components/constants'
+import { Chains, RelayToken } from '~/components/constants'
 import Web3 from 'web3'
 import { get } from 'lodash'
 import { AbiItem } from 'web3-utils'
-import { ChainTypes } from '~/components/utils'
+import { ChainTypes, toPlainString } from '~/components/utils'
 import { MetamaskChain } from '~/web3/evm_chain'
 import { routerAddresses, contractsABI, wrappedNatives, gtonOnChain } from '~/web3/constants'
 import {
@@ -17,11 +17,10 @@ import {
 } from '~/utils/swap'
 import { setUpcomingTxn, sendDataToOracle } from '~/utils/oracle'
 import { getSwapOutAmount, GTON, NATIVE_SOL, TokenAmount } from '~/utils/tokens'
-import { gtonPoolInfo } from '~/utils/constants'
 
 const { HttpProvider } = Web3.providers
 
-function createEvmInstance(endpoint: string): Web3 {
+export function createEvmInstance(endpoint: string): Web3 {
   return new Web3(new HttpProvider(endpoint))
 }
 function createMetamaskInstance(): Web3 {
@@ -50,6 +49,7 @@ interface FunctionPack {
 
 interface Web3Invoker {
   makeSwap(type: ChainTypes, params: Object): Web3Swap
+  makeOnchainSwap(type: ChainTypes, params: Object): Web3Swap;
   resolveCurrentAddress(type: ChainTypes): Web3Function
   getNetworkVersion(type: ChainTypes): Web3Network
   switchNetwork(chain: MetamaskChain): void
@@ -59,6 +59,8 @@ export interface RelaySwapData {
   destination: string
   userAddress: string
   addressTo: string
+  tokenTo: RelayToken
+  tokenFrom: RelayToken
   value: string
   chainId: Chains
 }
@@ -77,19 +79,46 @@ function hexToBytes(hex: string) {
   return bytes
 }
 
+async function makeOnchainSwapEvm(params: RelaySwapData): Promise<string> {
+  const { destination, addressTo, value, userAddress, chainId, tokenFrom, tokenTo } = params
+  const okexRouterAddress = "0xaaDF3BfaF9D9AEFaC31D25814dAc8DEF1a7e4438"
+  const web3 = createMetamaskInstance()
+  const contract = new web3.eth.Contract(
+    contractsABI.UniswapRouter as AbiItem[],
+    okexRouterAddress
+  )
+  const valueToSend = toPlainString(new TokenAmount(value, 18, false).toWei().toNumber())
+  const path = [tokenFrom.address, gtonOnChain[chainId], tokenTo.address]
+  let firstTxn
+  if (tokenFrom.native) {
+    console.log('native->erc');
+    
+    firstTxn = await contract.methods
+    .swapExactETHForTokens(0, path, userAddress, 15000000000)
+    .send({ from: userAddress, value: valueToSend })
+  } else {
+    console.log('erc->native');
+    const tokenContract = new web3.eth.Contract(
+      contractsABI.ERC20ABI as AbiItem[],
+      tokenFrom.address
+    )
+    const approve = await tokenContract.methods.approve(okexRouterAddress, valueToSend).send({ from: userAddress });
+    firstTxn = await contract.methods
+    .swapExactTokensForETH(valueToSend,0, path, userAddress, 15000000000)
+    .send({ from: userAddress })
+  }
+  return firstTxn
+}
+
 async function makeSwapEvm(params: RelaySwapData): Promise<string> {
   console.log(params)
-  const { destination, addressTo, value, userAddress, chainId } = params
-  const valueToSend = new TokenAmount(value, 18, false).toWei().toString()
-  console.log(valueToSend)
-  const receiveTokenAddress = hexToBytes(wrappedNatives[destination].substring(2))
+  const { destination, addressTo, value, userAddress, chainId, tokenFrom, tokenTo } = params
+  const valueToSend = toPlainString(new TokenAmount(value, 18, false).toWei().toNumber())
+  const receiveTokenAddress = hexToBytes(tokenTo.address.substring(2))
   const bytes = hexToBytes(addressTo.substring(2)).concat(receiveTokenAddress)
   //@ts-ignore
   const contractAddress = routerAddresses[chainId]
-  const path = [wrappedNatives[chainId], gtonOnChain[chainId]]
-  console.log(path);
-  console.log(bytes);
-  console.log(receiveTokenAddress);
+  const path = [tokenFrom.address, gtonOnChain[chainId]]
   
   const web3 = createMetamaskInstance()
   const contract = new web3.eth.Contract(
@@ -206,6 +235,11 @@ const makeSwap: FunctionPack = {
   [ChainTypes.Solana]: makeSwapSol,
 }
 
+const makeOnchainSwap: FunctionPack = {
+  [ChainTypes.Evm]: makeOnchainSwapEvm,
+  [ChainTypes.Solana]: async () => '',
+}
+
 const resolveAddress: FunctionPack = {
   [ChainTypes.Evm]: resolveAdrressEvm,
   [ChainTypes.Solana]: resolveAdrressSol,
@@ -220,6 +254,11 @@ const invoker: Web3Invoker = {
   makeSwap(type: ChainTypes, params: Object) {
     return async function () {
       return makeSwap[type](params)
+    }
+  },
+  makeOnchainSwap(type: ChainTypes, params: Object) {
+    return async function () {
+      return makeOnchainSwap[type](params)
     }
   },
   resolveCurrentAddress(type: ChainTypes) {

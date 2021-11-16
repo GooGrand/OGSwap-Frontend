@@ -1,4 +1,4 @@
-import { Chains } from '~/components/constants'
+import { Chains, RelayToken } from '~/components/constants'
 import { TokenAmount } from '~/utils/safe-math'
 
 export type Transaction = {
@@ -9,6 +9,8 @@ export type Transaction = {
   fromAddress: string;
   toAddress: string;
   amountFrom: string;
+  tokenFrom: RelayToken
+  tokenTo: RelayToken
   amountTo: string;
   lastBlock: number //might not necessary
   chainFrom: Chains

@@ -124,6 +124,18 @@ export class Web3Invoker extends Invoker {
     return res
   }
 
+  async getErc20TokenBalance(web3: Web3, tokenAddress: string, userAddress: string) {
+    const contract = new web3.eth.Contract(
+      this.contractsABI.ERC20ABI as AbiItem[],
+      tokenAddress
+    )
+    const res = await contract.methods
+      .balanceOf(userAddress)
+      .call()
+    return res
+    
+  }
+
   async getChainBalance(nodeUrl: string, address: string): Promise<number> {
     const web3 = new Web3(new HttpProvider(nodeUrl))
     const res = await web3.eth.getBalance(address)

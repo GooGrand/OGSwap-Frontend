@@ -2,6 +2,7 @@ import RelayContract from './abi/relay_contract.json'
 import ERC20ABI from './abi/erc20.json'
 import LpContractV2 from './abi/lpContractv2.json'
 import OgRouter from './abi/OgRouter.json'
+import UniswapRouter from './abi/UniswapV2Router02.json'
 import RelayProgram from './idl/relay.json'
 import { Chains } from "~/components/constants"
 
@@ -79,7 +80,8 @@ export const contractsABI = {
   RelayContract,
   ERC20ABI,
   LpContractV2,
-  OgRouter
+  OgRouter,
+  UniswapRouter
 }
 
 export const programIdls = {

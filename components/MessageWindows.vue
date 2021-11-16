@@ -7,7 +7,7 @@
       :txn="item"
       :collapsed="index !== indexOpen"
       @collapse="handleCollapse(index)"
-      :completed="item.firstTxnHash && item.secondTxnHash"
+      :completed="Boolean(item.firstTxnHash) && Boolean(item.secondTxnHash)"
       @close="deleteTxn(index)"
     >
       <div class="mb-[18px] flex justify-center pt-[5px]">
@@ -59,7 +59,7 @@
       </div>
 
       <div class="bg-dark-charcoal rounded-[10px] text-center text-[10px] min-h-[24px] flex flex-col justify-center px-[42px] py-[4px] relative">
-        <icon :name="item.secondTxnHash ? 'mono/check-2' : 'mono/clock'" class="absolute top-[3px] left-[19px]  fill-current stroke-current text-[18px]" />
+        <icon :name="item.secondTxnHash ? 'mono/check-2' : 'mono/clock'" class="absolute top-[3px] left-[19px]  fill-current stroke-current text-[18px]" :class="{'text-medium-spring-green': item.secondTxnHash}" />
 
         Swap transaction is {{ item.secondTxnHash ? "complete" : "pending"}}
         <a v-if="item.secondTxnHash" :href="explorers[item.chainTo] + item.firstTxnHash" target="_blank" class="absolute top-[1px] p-1 right-[10px] text-xs text-white hover:text-candy-apple-red">

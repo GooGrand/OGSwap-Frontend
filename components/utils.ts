@@ -45,15 +45,8 @@ export function toWei(v: BigNumber): BigNumber {
  * @param num number convreted to string
  * @returns string
  */
-export function toPlainString(num: string): string {
-  return ('' + +num).replace(
-    /(-?)(\d*)\.?(\d*)e([+-]\d+)/,
-    function (a, b, c, d, e) {
-      return e < 0
-        ? b + '0.' + Array(1 - e - c.length).join('0') + c + d
-        : b + c + d + Array(e - d.length + 1).join('0')
-    }
-  )
+ export function toPlainString(num: number): string {
+  return num.toLocaleString('fullwide', { useGrouping: false })
 }
 
 export function numberWithCommas(x: string): string {

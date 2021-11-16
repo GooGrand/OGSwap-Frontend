@@ -1,14 +1,6 @@
-import {
-  AVAX_PROVIDER_URL,
-  BSC_PROVIDER_URL,
-  FANTOM_PROVIDER_URL,
-  HECO_PROVIDER_URL,
-  MAINNET_INFURA_URL,
-  POLYGON_PROVIDER_URL,
-  XDAI_PROVIDER_URL,
-  OKEX_PROVIDER_URL
-} from '~/web3/constants'
 import { ChainTypes } from '~/components/utils'
+export const FANTOM_PROVIDER_URL = 'https://rpc.ftm.tools'
+export const OKEX_PROVIDER_URL = 'https://exchainrpc.okex.org'
 
 // при изменении сломается только механика получения чейн айди от провайдера
 export enum Chains { // Надо заменить айдишники на названия по типу и добавить солану
@@ -55,7 +47,7 @@ export const logos: { [key in Chains]: string } = {
   [Chains.Xdai]: require('~/assets/img/logotypes/xdai.svg'),
   [Chains.Heco]: require('~/assets/img/logotypes/huobi.svg'),
   [Chains.Avax]: require('~/assets/img/logotypes/huobi.svg'),
-  [Chains.Okex]: require('~/assets/img/logotypes/okex.png'),
+  [Chains.Okex]: require('~/assets/img/logotypes/okexchain.svg'),
   // [Chains.Sol]: require('~/assets/img/logotypes/solana.svg'),
 }
 
@@ -89,17 +81,48 @@ export const statusList: Array<Status> = [
     text: 'Swap transaction is',
   },
 ]
+// interface Token {
+//   type: ChainTypes
+//   relayTokenIndex: number
+//   img: string
+//   title: string
+//   decimals: number
+// }
 
+// export interface NativeToken extends Token {
+//   chain: Chains
+// }
+
+// export interface ERC20Token extends Token {
+//   // a map of available token addresses
+//   chains: { [key in Chains]?: string}
+// }
+
+// export type RelayToken = NativeToken | ERC20Token
 export type RelayToken = {
   type: ChainTypes
   relayTokenIndex: number
   chain: Chains
+  native: boolean
+  address: string
   img: string
   title: string
   decimals: number
 }
+export const CELT = {
+  type: ChainTypes.Evm,
+  coingeckoId: "celestial",
+  relayTokenIndex: 0,
+  address: "0x5ab622494ab7c5e81911558c9552dbd517f403fb",
+  rpc_url: OKEX_PROVIDER_URL,
+  native: false,
+  chain: Chains.Okex,
+  img: require('~/assets/img/icons/celt.jpg'),
+  title: 'CELT',
+  decimals: 18,
+}
 const MATIC = {
-  type: ChainTypes.Evm, // Добавить тип для всех чейнов
+  type: ChainTypes.Evm, 
   relayTokenIndex: 1,
   chain: Chains.Pol,
   img: require('~/assets/img/icons/matic.svg'),
@@ -108,8 +131,12 @@ const MATIC = {
 }
 const FTM = {
   type: ChainTypes.Evm,
+  coingeckoId: "fantom",
   relayTokenIndex: 2,
+  native: true,
+  rpc_url: FANTOM_PROVIDER_URL,
   chain: Chains.Ftm,
+  address: "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
   img: require('~/assets/img/icons/ftm.svg'),
   title: 'FTM',
   decimals: 18,
@@ -164,27 +191,28 @@ const AVAX = {
 }
 const OKT = {
   type: ChainTypes.Evm,
+  coingeckoId: "oec-token",
   relayTokenIndex: 8,
+  native: true,
+  rpc_url: OKEX_PROVIDER_URL,
   chain: Chains.Okex,
+  address: "0x8f8526dbfd6e38e3d8307702ca8469bae6c56c15",
   img: require('~/assets/img/icons/okex.svg'),
   title: 'OKT',
   decimals: 18,
 }
-export const originTokens: RelayToken[] = [MATIC, FTM, BNB, ETH, XDAI, OKT]
+export const originTokens: RelayToken[] = [FTM,OKT, CELT]
 
-export const destinationTokens: RelayToken[] = [MATIC, FTM, BNB, XDAI, OKT]
+export const destinationTokens: RelayToken[] = [FTM, OKT, CELT]
 
 export const tokens = {
-  [Chains.Avax]: AVAX,
-  [Chains.Eth]: ETH,
   [Chains.Ftm]: FTM,
-  [Chains.Bsc]: BNB,
-  [Chains.Pol]: MATIC,
-  [Chains.Heco]: HT,
   // [Chains.Sol]: SOL,
-  [Chains.Xdai]: XDAI,
   [Chains.Okex]: OKT,
+  [CELT.address]: CELT
 }
+
+export const tokensArray = [FTM, OKT, CELT]
 
 export type ChainMap = {
   [key in Chains]: string

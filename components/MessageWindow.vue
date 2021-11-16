@@ -92,8 +92,8 @@
 </template>
 
 <script lang="ts">
-import { Transaction, emptyPreview } from '~/utils/transactions'
-import Vue, { PropType } from 'vue'
+import { Transaction } from '~/utils/transactions'
+import Vue from 'vue'
 import { sendDataToOracle } from '~/utils/oracle'
 import { relayAddresses, chainProviderUrls } from '~/web3/constants'
 import { Web3Invoker } from '~/web3/metamask'

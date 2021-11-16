@@ -64,8 +64,16 @@
         <div class="mb-[16px]">
           <field-label>Send</field-label>
           <div class="relative">
-            <coin-item class="absolute left-[12px] top-1/2 -translate-y-1/2" :label="fromToken.title" :img="fromToken.img"/>
-            <field-input readonly :value="Number(preview.amountFrom).toFixed(4)" class="text-right rounded-[10px] text-[18px]" />
+            <coin-item
+              class="absolute left-[12px] top-1/2 -translate-y-1/2"
+              :label="fromToken.title"
+              :img="fromToken.img"
+            />
+            <field-input
+              readonly
+              :value="Number(preview.amountFrom).toFixed(4)"
+              class="text-right rounded-[10px] text-[18px]"
+            />
           </div>
         </div>
 
@@ -77,8 +85,16 @@
         <div class="mb-[16px]">
           <field-label>Receive</field-label>
           <div class="relative">
-            <coin-item class="absolute left-[12px] top-1/2 -translate-y-1/2" :label="toToken.title" :img="toToken.img"/>
-            <field-input readonly :value="Number(preview.amountTo).toFixed(4)" class="text-right rounded-[10px] text-[18px]" />
+            <coin-item
+              class="absolute left-[12px] top-1/2 -translate-y-1/2"
+              :label="toToken.title"
+              :img="toToken.img"
+            />
+            <field-input
+              readonly
+              :value="Number(preview.amountTo).toFixed(4)"
+              class="text-right rounded-[10px] text-[18px]"
+            />
             <!-- <field-input readonly value="10.0000 | $10,00.3469" class="text-right rounded-[10px] text-[18px]" /> -->
           </div>
         </div>
@@ -100,7 +116,9 @@
         </div>
       </div>
 
-      <btn class="mt-4" block :disabled="processing" @click="makeSwap"> Swap </btn>
+      <btn class="mt-4" block :disabled="processing" @click="makeSwap">
+        Swap
+      </btn>
     </angle-card>
   </div>
 </template>
@@ -108,7 +126,13 @@
 <script lang="ts">
 import Vue from 'vue'
 import { Transaction } from '~/utils/transactions'
-import { Chains, chainToName, RelayToken, tokens, logos } from '~/components/constants'
+import {
+  Chains,
+  chainToName,
+  RelayToken,
+  tokens,
+  logos,
+} from '~/components/constants'
 import { RelaySwapData } from '~/web3/metamask'
 
 export default Vue.extend({
@@ -116,17 +140,19 @@ export default Vue.extend({
     address: '',
     amount: '0',
     connected: false,
-    processing: false
+    processing: false,
   }),
   computed: {
     isError(): boolean {
       return Number(this.amount || 0) > 1000 || Number(this.amount || 0) < 0
     },
     fromToken(): RelayToken {
-      return tokens[this.preview.chainFrom]
+      // @ts-ignore
+      return this.preview.tokenFrom
     },
     toToken(): RelayToken {
-      return tokens[this.preview.chainTo]
+      // @ts-ignore
+      return this.preview.tokenTo
     },
     preview(): Transaction {
       return this.$store.getters['transactions/getPreview']
@@ -140,19 +166,39 @@ export default Vue.extend({
   },
   methods: {
     async makeSwap() {
-      this.processing = true;
-      const id = await this.$store.dispatch("transactions/startSwap")
-      
-      const txnId = await this.$web3.makeSwap(this.fromToken.type, {
-        destination: this.toToken.chain,
-        userAddress: this.preview.fromAddress,
-        addressTo: this.preview.toAddress,
-        value: this.preview.amountFrom,
-        chainId: this.preview.chainFrom,
-      } as RelaySwapData).call(this)
-     this.$store.commit("transactions/update", {txnIndex: id, body: {firstTxnHash: txnId}})
-
+      this.processing = true
+      let txnId
+      if (this.preview.tokenTo.chain == this.preview.tokenFrom.chain) {
+        txnId = await this.$web3
+          .makeOnchainSwap(this.fromToken.type, {
+            tokenTo: this.preview.tokenTo,
+            tokenFrom: this.preview.tokenFrom,
+            destination: this.toToken.chain,
+            userAddress: this.preview.fromAddress,
+            addressTo: this.preview.toAddress,
+            value: this.preview.amountFrom,
+            chainId: this.preview.chainFrom,
+          } as RelaySwapData)
+          .call(this)
+      } else {
+        const id = await this.$store.dispatch('transactions/startSwap')
+        txnId = await this.$web3
+          .makeSwap(this.fromToken.type, {
+            tokenTo: this.preview.tokenTo,
+            tokenFrom: this.preview.tokenFrom,
+            destination: this.toToken.chain,
+            userAddress: this.preview.fromAddress,
+            addressTo: this.preview.toAddress,
+            value: this.preview.amountFrom,
+            chainId: this.preview.chainFrom,
+          } as RelaySwapData)
+          .call(this)
+        this.$store.commit('transactions/update', {
+          txnIndex: id,
+          body: { firstTxnHash: txnId },
+        })
+      }
     },
-  }
+  },
 })
 </script>
