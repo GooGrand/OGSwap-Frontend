@@ -17,7 +17,7 @@ export async function sendDataToOracle(
     const res = await fetch(baseCache + 'provisor/insert', {
       method: 'POST',
       headers: {
-        "Content-type":"Application/json"
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         txn,

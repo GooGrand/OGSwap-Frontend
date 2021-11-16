@@ -261,6 +261,16 @@
                 />
               </span>
             </li>
+            <li class="mb-[25px] md:mb-0 md:h-[90px]">
+              <span>
+                <img
+                  src="~/assets/img/landing/logos/okexchain.png"
+                  alt="Okex"
+                  width="136"
+                  height="34"
+                />
+              </span>
+            </li>
             <li class="md:flex md:items-end md:h-[90px]">
               <span>
                 <img
