@@ -41,6 +41,7 @@ declare module 'vue/types/vue' {
 
 type Web3Function = (params?: Object) => Promise<string> | null
 type Web3Network = (params?: Object) => Promise<Chains>
+type Web3Swap = (params?: Object) => Promise<Array<any>>
 
 interface FunctionPack {
   [ChainTypes.Evm]: any
@@ -48,7 +49,7 @@ interface FunctionPack {
 }
 
 interface Web3Invoker {
-  makeSwap(type: ChainTypes, params: Object): Web3Function
+  makeSwap(type: ChainTypes, params: Object): Web3Swap
   resolveCurrentAddress(type: ChainTypes): Web3Function
   getNetworkVersion(type: ChainTypes): Web3Network
   switchNetwork(chain: MetamaskChain): void
@@ -97,7 +98,7 @@ async function makeSwapEvm(params: RelaySwapData): Promise<string> {
   // @ts-ignore
   return {firstTxn, secondTxn}
 }
-async function makeSwapSol(params: RelaySwapData): Promise<string> {
+async function makeSwapSol(params: RelaySwapData): Promise<Array<any>> {
   const { destination, addressTo, value, userAddress, chainId } = params
   const endpoint = 'https://solana-api.projectserum.com'
   const connection = createSolInstance(endpoint)
@@ -160,7 +161,7 @@ async function makeSwapSol(params: RelaySwapData): Promise<string> {
   } catch (e) {
     console.log(e)
   }
-  return transferTxnId
+  return [transferTxnId, toCoinWithSlippage.amountOutWithSlippage.fixed()]
 }
 
 async function resolveAdrressEvm(): Promise<string> {

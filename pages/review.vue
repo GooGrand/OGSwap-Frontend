@@ -108,19 +108,8 @@
 <script lang="ts">
 import Vue from 'vue'
 import { Transaction } from '~/utils/transactions'
-import { Chains, chainToName, RelayToken, tokens } from '~/components/constants'
+import { Chains, chainToName, RelayToken, tokens, logos } from '~/components/constants'
 import { RelaySwapData } from '~/web3/metamask'
-const logos: { [key in Chains]: string } = {
-  [Chains.Ftm]: require('~/assets/img/logotypes/fantom.svg'),
-  [Chains.Bsc]: require('~/assets/img/logotypes/binance.svg'),
-  [Chains.Eth]: require('~/assets/img/logotypes/ethereum.svg'),
-  [Chains.Pol]: require('~/assets/img/logotypes/matic.svg'),
-  [Chains.Xdai]: require('~/assets/img/logotypes/xdai.svg'),
-  [Chains.Heco]: require('~/assets/img/logotypes/huobi.svg'),
-  [Chains.Avax]: require('~/assets/img/logotypes/huobi.svg'),
-  // [Chains.Sol]: require('~/assets/img/logotypes/solana.svg'),
-  [Chains.Okex]: require('~/assets/img/logotypes/okex.png'),
-}
 
 export default Vue.extend({
   data: () => ({
@@ -157,9 +146,11 @@ export default Vue.extend({
         userAddress: this.preview.fromAddress,
         addressTo: this.preview.toAddress,
         value: this.preview.amountFrom,
-        chainId: this.preview.chainFrom
+        chainId: this.preview.chainFrom,
       } as RelaySwapData).call(this)
-    }
+      // @ts-ignore
+      this.$store.commit("transactions/update", {txnIndex: txnId, body: {firstTxnHash: txn.transactionHash, gtonAmount}})
+    },
   }
 })
 </script>

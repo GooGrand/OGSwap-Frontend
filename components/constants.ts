@@ -46,6 +46,31 @@ export const limits: Record<string, number> = {
   // [Chains.Sol]: 0.62, // Will add limit for solana?
 }
 
+export const logos: { [key in Chains]: string } = {
+  [Chains.Ftm]: require('~/assets/img/logotypes/fantom.svg'),
+  [Chains.Bsc]: require('~/assets/img/logotypes/binance.svg'),
+  [Chains.Pol]: require('~/assets/img/logotypes/matic.svg'),
+  [Chains.Eth]: require('~/assets/img/logotypes/ethereum.svg'),
+  [Chains.Xdai]: require('~/assets/img/logotypes/xdai.svg'),
+  [Chains.Xdai]: require('~/assets/img/logotypes/xdai.svg'),
+  [Chains.Heco]: require('~/assets/img/logotypes/huobi.svg'),
+  [Chains.Avax]: require('~/assets/img/logotypes/huobi.svg'),
+  [Chains.Okex]: require('~/assets/img/logotypes/okex.png'),
+  // [Chains.Sol]: require('~/assets/img/logotypes/solana.svg'),
+}
+
+export const logosUrls: { [key in Chains]: string } = {
+  [Chains.Ftm]: '~/assets/img/logotypes/fantom.svg',
+  [Chains.Bsc]: '~/assets/img/logotypes/binance.svg',
+  [Chains.Eth]: '~/assets/img/logotypes/ethereum.svg',
+  [Chains.Pol]: '~/assets/img/logotypes/matic.svg',
+  [Chains.Xdai]: '~/assets/img/logotypes/xdai.svg',
+  [Chains.Heco]: '~/assets/img/logotypes/huobi.svg',
+  [Chains.Avax]: '~/assets/img/logotypes/huobi.svg',
+  [Chains.Okex]: '~/assets/img/logotypes/okex.png',
+  // [Chains.Sol]: '~/assets/img/logotypes/solana.svg',
+}
+
 interface Status {
   id: number
   visible: boolean
