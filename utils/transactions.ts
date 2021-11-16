@@ -1,4 +1,4 @@
-import { Chains, RelayToken } from '~/components/constants'
+import { Chains, RelayToken, FTM, CELT } from '~/components/constants'
 import { TokenAmount } from '~/utils/safe-math'
 
 export type Transaction = {
@@ -21,9 +21,11 @@ export const emptyPreview = {
   id: 0,
   firstTxnHash: null,
   secondTxnHash: null,
+  tokenFrom: FTM,
+  tokenTo: CELT,
   lastBalance: 0,
   lastBlock: 0, //might not necessary
-  chainFrom:  Chains.Eth,
+  chainFrom:  Chains.Okex,
   chainTo: Chains.Ftm,
   fromAddress: "",
   toAddress: "",

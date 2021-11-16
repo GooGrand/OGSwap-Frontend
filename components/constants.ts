@@ -129,7 +129,7 @@ const MATIC = {
   title: 'MATIC',
   decimals: 18,
 }
-const FTM = {
+export const FTM = {
   type: ChainTypes.Evm,
   coingeckoId: "fantom",
   relayTokenIndex: 2,
