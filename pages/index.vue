@@ -261,7 +261,7 @@
                 />
               </span>
             </li>
-            <li class="mb-[25px] md:mb-0 md:h-[90px]">
+            <li class="mb-[25px] md:flex md:items-end md:mb-0 md:h-[90px]">
               <span>
                 <img
                   src="~/assets/img/landing/logos/okexchain.svg"
@@ -271,7 +271,7 @@
                 />
               </span>
             </li>
-            <li class="md:flex md:items-end md:h-[90px]">
+            <li class="mb-[25px] md:mb-0 md:h-[90px]">
               <span>
                 <img
                   src="~/assets/img/landing/logos/binance.svg"
