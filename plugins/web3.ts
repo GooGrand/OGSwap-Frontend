@@ -17,6 +17,7 @@ import {
 } from '~/utils/swap'
 import { setUpcomingTxn, sendDataToOracle } from '~/utils/oracle'
 import { getSwapOutAmount, GTON, NATIVE_SOL, TokenAmount } from '~/utils/tokens'
+import logger from '~/utils/logger'
 
 const { HttpProvider } = Web3.providers
 
@@ -121,9 +122,21 @@ async function makeSwapEvm(params: RelaySwapData): Promise<string> {
     contractsABI.OgRouter as AbiItem[],
     contractAddress
   )
-  const firstTxn = await contract.methods
-    .crossChainFromEth(0, destination, 0, path, bytes)
-    .send({ from: userAddress, value: valueToSend })
+  let firstTxn
+  if (tokenFrom.native) {
+    firstTxn = await contract.methods
+      .crossChainFromEth(0, destination, 0, path, bytes)
+      .send({ from: userAddress, value: valueToSend })
+  } else {
+    const tokenContract = new web3.eth.Contract(
+      contractsABI.ERC20ABI as AbiItem[],
+      tokenFrom.address
+    )
+    const approve = await tokenContract.methods.approve(contractAddress, valueToSend).send({ from: userAddress });
+    firstTxn = await contract.methods
+    .crossChain (0, destination, valueToSend, 0, userAddress, path, bytes)
+    .send({ from: userAddress })
+  }
   return firstTxn.transactionHash
 }
 async function makeSwapSol(params: RelaySwapData): Promise<Array<any>> {
