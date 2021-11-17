@@ -132,7 +132,5 @@ export async function getPoolStable(
 
 export function calculatePrice(stableReserves: TokenAmount, tokenReserves: TokenAmount): string {
   // the price in stable-token pool equals stableReserves / tokenReserves
-  console.log(stableReserves.toEther().toFixed(2));
-  console.log(tokenReserves.toEther().toFixed(2));
   return stableReserves.toEther().dividedBy(tokenReserves.toEther()).toFixed(2)
 }

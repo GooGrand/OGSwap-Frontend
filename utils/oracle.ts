@@ -14,7 +14,6 @@ export async function sendDataToOracle(
   from: number
 ): Promise<string | null> {
   try {
-    const health = await fetch(baseCache + "provisor/health");
     const res = await fetch(baseCache + 'provisor/insert', {
       method: 'POST',
       headers: {

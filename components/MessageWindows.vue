@@ -62,7 +62,7 @@
         <icon :name="item.secondTxnHash ? 'mono/check-2' : 'mono/clock'" class="absolute top-[3px] left-[19px]  fill-current stroke-current text-[18px]" :class="{'text-medium-spring-green': item.secondTxnHash}" />
 
         Swap transaction is {{ item.secondTxnHash ? "complete" : "pending"}}
-        <a v-if="item.secondTxnHash" :href="explorers[item.chainTo] + item.firstTxnHash" target="_blank" class="absolute top-[1px] p-1 right-[10px] text-xs text-white hover:text-candy-apple-red">
+        <a v-if="item.secondTxnHash" :href="explorers[item.chainTo] + item.secondTxnHash" target="_blank" class="absolute top-[1px] p-1 right-[10px] text-xs text-white hover:text-candy-apple-red">
           <icon name="mono/link" class="fill-current" />
         </a>
       </div>

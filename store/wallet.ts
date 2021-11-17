@@ -15,7 +15,6 @@ export function isWalletEqual(walletA: WalletBody, walletB: WalletBody) {
     const [valueA, valueB] = [_.get(walletA, prop), _.get(walletB, prop)]
 
     if (valueA !== valueB) {
-      console.log({ valueA, valueB })
       return false
     }
   }
@@ -62,9 +61,6 @@ export const mutations = {
       ...state[provider],
       ...body,
     }
-    console.log('update-wallet')
-
-    console.log(state[provider])
   },
 }
 

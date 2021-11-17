@@ -364,7 +364,6 @@ export default Vue.extend({
     await this.setBalances()
     await this.setChain()
     await this.setPrices()
-    console.log(this.prices)
 
     // достаем все данные из стора и начинаем проверку данных по последним изменениям баланса
   },
@@ -380,8 +379,6 @@ export default Vue.extend({
       // @ts-ignore
         this.prices[item.address] = await getTokenById(item.coingeckoId)
       }
-      console.log(this.prices);
-      
     },
     async setBalances() {
       if (this.currentWallet) await this.setMMBalances()

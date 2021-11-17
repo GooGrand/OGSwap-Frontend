@@ -91,13 +91,10 @@ async function makeOnchainSwapEvm(params: RelaySwapData): Promise<string> {
   const path = [tokenFrom.address, gtonOnChain[chainId], tokenTo.address]
   let firstTxn
   if (tokenFrom.native) {
-    console.log('native->erc');
-    
     firstTxn = await contract.methods
     .swapExactETHForTokens(0, path, userAddress, 15000000000)
     .send({ from: userAddress, value: valueToSend })
   } else {
-    console.log('erc->native');
     const tokenContract = new web3.eth.Contract(
       contractsABI.ERC20ABI as AbiItem[],
       tokenFrom.address
@@ -111,7 +108,6 @@ async function makeOnchainSwapEvm(params: RelaySwapData): Promise<string> {
 }
 
 async function makeSwapEvm(params: RelaySwapData): Promise<string> {
-  console.log(params)
   const { destination, addressTo, value, userAddress, chainId, tokenFrom, tokenTo } = params
   const valueToSend = toPlainString(new TokenAmount(value, 18, false).toWei().toNumber())
   const receiveTokenAddress = hexToBytes(tokenTo.address.substring(2))
@@ -174,10 +170,8 @@ async function makeSwapSol(params: RelaySwapData): Promise<Array<any>> {
     }
   }
   const signedTxn = await window.solana.signTransaction(txn)
-  console.log(signedTxn) // we need this to debug
   //@ts-ignores
   const txnId = await connection.sendRawTransaction(signedTxn.serialize())
-  console.log(txnId)
   const provider = setupAnchorProvider(connection, window.solana)
   const transferData = prepareDataForTransfer(
     addressTo,
