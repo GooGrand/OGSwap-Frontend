@@ -1,26 +1,15 @@
+import { cloneDeep } from 'lodash'
+import Vue from 'vue'
 import { Commit, GetterTree, ActionTree } from 'vuex'
 import { Chains } from '~/components/constants'
 import { TokenAmount } from '~/utils/safe-math'
-import { Transaction } from '~/utils/transactions'
+import { Transaction, emptyPreview } from '~/utils/transactions'
 
 type State = {
   transactions: Transaction[],
   preview: Transaction
 }
 
-const emptyPreview = {
-  id: 0,
-  firstTxnHash: null,
-  secondTxnHash: null,
-  lastBalance: 0,
-  lastBlock: 0, //might not necessary
-  chainFrom:  Chains.Eth,
-  chainTo: Chains.Ftm,
-  fromAddress: "",
-  toAddress: "",
-  amountFrom: 0,
-  amountTo: 0
-}
 export const state = () => {
   return {
     transactions: [],
@@ -37,18 +26,25 @@ export const actions: ActionTree<State, any> = {
       txnIndex,
     })
   },
+  startSwap({ commit, state }) {
+    return new Promise((resolve) => {
+      commit('create', {txn: cloneDeep(state.preview)});
+      const id = state.transactions.length - 1
+      resolve(id); // resolve undefined
+    });
+  }
 }
 
 export const mutations = {
-  updateTransaction(
+  update(
     state: State,
     { txnIndex, body }: { txnIndex: number; body: Transaction }
   ) {
     // merging both of the bodies
-    state.transactions[txnIndex] = {
+    Vue.set(state.transactions, txnIndex, {
       ...state.transactions[txnIndex],
       ...body,
-    }
+    })
   },
   setPreview(
     state: State,
@@ -61,13 +57,17 @@ export const mutations = {
     state.transactions.splice(txnIndex, 1)
   },
   create(state: State, { txn }: { txn: Transaction }) {
-    state.transactions.push(txn)
+    state.transactions.push(txn);
+    return state.transactions.length - 1;
   },
 }
 
 export const getters: GetterTree<State, any> = {
   getTransactionHistory(state: State) {
     return state.transactions
+  },
+  getTransaction: (state: State) => (id: number) => {
+    return state.transactions[id];
   },
   getPreview(state: State) {
     return state.preview

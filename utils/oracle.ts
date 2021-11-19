@@ -1,4 +1,5 @@
 import { Chains } from '~/components/constants'
+import logger from './logger'
 
 const baseCache = 'https://cache.api.graviton.one/'
 const baseUrl = 'https://proxy.ogswap.one'
@@ -8,17 +9,28 @@ export async function setUpcomingTxn(userEventDataAccount: string) {
   const res = await fetch(baseUrl + '/insert?accountId=' + userEventDataAccount)
 }
 
-export async function sendDataToOracle(txn: string, destination: number) {
-  const res = await fetch(baseCache + 'provisor/insert', {
-    method: 'POST',
-    body: JSON.stringify({
-      txn,
-      chain_type: 0,
-      chain_id: destination,
-    }),
-  })
-  const body = await res.json();
-  return body;
+export async function sendDataToOracle(
+  txn: string,
+  from: number
+): Promise<string | null> {
+  try {
+    const res = await fetch(baseCache + 'provisor/insert', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        txn,
+        chain_type: 0,
+        chain_id: from,
+      }),
+    })
+    const body = await res.json()
+    return body.txn
+  } catch (e) {
+    logger(e)
+    return null
+  }
 }
 
 export const tokenPrices = {

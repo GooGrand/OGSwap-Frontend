@@ -167,7 +167,6 @@
                   :img="token.img"
                   :index="index"
                   :chain="token.chain"
-                  :selected="sendTokenChain"
                   :blocking="true"
                   class="hover:font-bold"
                   @select="chooseCurrentChainReceive"
@@ -210,9 +209,7 @@
               />
             </label>
           </div>
-          <div
-            class="px-[6px] w-[162px] flex items-end"
-          >
+          <div class="px-[6px] w-[162px] flex items-end">
             <btn variant="blood" block @click="addressTo = addressFrom">
               Use the same address
             </btn>
@@ -242,7 +239,7 @@ import {
   destinationTokens,
   RelayToken,
   Chains,
-  chainToTokenName
+  chainToTokenName,
 } from '~/components/constants'
 import { WalletBody } from '~/store/types'
 import { getTokenById, tokenPrices } from '~/utils/oracle'
@@ -250,15 +247,8 @@ import { WalletProvider, ChainTypes } from '~/components/utils'
 import { PriceData } from '~/utils/reserves'
 import { Transaction } from '~/utils/transactions'
 import { availableChains } from '~/web3/evm_chain'
-import {limits} from "~/components/constants";
-import {
-  BSC_PROVIDER_URL,
-  FANTOM_PROVIDER_URL,
-  MAINNET_INFURA_URL,
-  OKEX_PROVIDER_URL,
-  POLYGON_PROVIDER_URL,
-  XDAI_PROVIDER_URL,
-} from '~/web3/constants'
+import { limits, CELT, tokensArray } from '~/components/constants'
+import { createEvmInstance } from '~/plugins/web3'
 
 const chainNames: { [key in Chains]: string } = {
   [Chains.Eth]: 'Ethereum',
@@ -277,26 +267,26 @@ const invoker = new Web3Invoker()
 export default Vue.extend({
   data: () => ({
     eventBus,
-    prices: {} as { [key in Chains]: number },
+    prices: {} as { [key: string]: number },
     amount: '0',
     addressTo: '',
     amountReceive: '0',
     connected: false,
     originTokens,
     destinationTokens,
-    sendTokenIndex: 3,
-    sendTokenChain: Chains.Eth as Chains,
-    receiveTokenIndex: 2,
-    receiveTokenChain: Chains.Bsc as Chains,
+    sendTokenIndex: 0,
+    sendTokenChain: Chains.Ftm as Chains,
+    receiveTokenIndex: 1,
+    receiveTokenChain: Chains.Okex as Chains,
     isSelecting: false,
-    balances: {} as { [key in Chains]: TokenAmount },
+    balances: {} as { [key: string]: TokenAmount },
     availableChains,
     currentChain: null as Chains | null,
   }),
   computed: {
     fromTokenPrice(): string {
       if (!Number(this.amount)) return '0'
-      return (Number(this.amount) * this.prices[this.sendTokenChain]).toFixed(4)
+      return (Number(this.amount) * this.prices[this.currentTokenSend.address]).toFixed(4)
       // if (!this.amount || this.reservesFrom == null) return '0'
       // const currentChainTokenPrice = Number(this.reservesFrom.dexNativePrice)
       // return (Number(this.amount) * currentChainTokenPrice).toFixed(2)
@@ -304,7 +294,7 @@ export default Vue.extend({
     toTokenPrice(): string {
       if (!Number(this.amountReceive)) return '0'
       return (
-        Number(this.amountReceive) * this.prices[this.receiveTokenChain]
+        Number(this.amountReceive) * this.prices[this.currentTokenReceive.address]
       ).toFixed(4)
       // if (!this.amountReceive || this.reservesTo == null) return '0'
       // const currentChainTokenPrice = Number(this.reservesTo.dexNativePrice)
@@ -319,23 +309,28 @@ export default Vue.extend({
       )
     },
     currentChainTokenBalance(): string {
-      if (!this.balances[this.sendTokenChain]) return '0.0000'
-      return this.balances[this.sendTokenChain].toEther().toFixed(4)
+      if (!this.balances[this.currentTokenSend.address]) return '0.0000'
+        return this.balances[this.currentTokenSend.address].toEther().toFixed(4)
     },
     currentChainTokenName(): string {
-      return chainToTokenName[this.sendTokenChain]
+      return this.currentTokenSend.title
     },
     chainIndexName(): string {
       return chainNames[this.sendTokenChain]
     },
     isError(): boolean {
-      return Number(this.amount || 0) > Number(this.currentChainTokenBalance) || Number(this.amount || 0) < 0 
+      return (
+        Number(this.amount || 0) > Number(this.currentChainTokenBalance) ||
+        Number(this.amount || 0) < 0
+      )
     },
     isLimit(): boolean {
-      return Number(this.amount) > limits[this.sendTokenChain];
+      return Number(this.amount) > limits[this.sendTokenChain]
     },
     isValidChain(): boolean {
-      return this.isMetamaskAvailable && this.sendTokenChain == this.currentChain
+      return (
+        this.isMetamaskAvailable && this.sendTokenChain == this.currentChain
+      )
     },
     currentTokenSend(): RelayToken {
       return originTokens[this.sendTokenIndex]
@@ -369,7 +364,6 @@ export default Vue.extend({
     await this.setBalances()
     await this.setChain()
     await this.setPrices()
-    console.log(this.prices)
 
     // достаем все данные из стора и начинаем проверку данных по последним изменениям баланса
   },
@@ -381,8 +375,9 @@ export default Vue.extend({
   },
   methods: {
     async setPrices() {
-      for (const item of Object.values(Chains)) {
-        this.prices[item] = await getTokenById(tokenPrices[item])
+      for (const item of tokensArray) {
+      // @ts-ignore
+        this.prices[item.address] = await getTokenById(item.coingeckoId)
       }
     },
     async setBalances() {
@@ -391,48 +386,29 @@ export default Vue.extend({
     async setMMBalances() {
       if (!this.currentWallet) return
       const address = this.currentWallet.address
-      this.$set(
-        this.balances,
-        Chains.Eth,
-        new TokenAmount(
-          await invoker.getChainBalance(MAINNET_INFURA_URL, address)
-        )
-      )
-      this.$set(
-        this.balances,
-        Chains.Pol,
-        new TokenAmount(
-          await invoker.getChainBalance(POLYGON_PROVIDER_URL, address)
-        )
-      )
-      this.$set(
-        this.balances,
-        Chains.Ftm,
-        new TokenAmount(
-          await invoker.getChainBalance(FANTOM_PROVIDER_URL, address)
-        )
-      )
-      this.$set(
-        this.balances,
-        Chains.Bsc,
-        new TokenAmount(
-          await invoker.getChainBalance(BSC_PROVIDER_URL, address)
-        )
-      )
-      this.$set(
-        this.balances,
-        Chains.Xdai,
-        new TokenAmount(
-          await invoker.getChainBalance(XDAI_PROVIDER_URL, address)
-        )
-      )
-      this.$set(
-        this.balances,
-        Chains.Okex,
-        new TokenAmount(
-          await invoker.getChainBalance(OKEX_PROVIDER_URL, address)
-        )
-      )
+      for (const token of tokensArray) {
+        if (token.native) {
+          this.$set(
+            this.balances,
+            token.address,
+            new TokenAmount(
+              await invoker.getChainBalance(token.rpc_url, address),
+              18,
+              false
+            )
+          )
+        } else {
+          const web3 = createEvmInstance(token.rpc_url)
+          this.$set(
+            this.balances,
+            token.address,
+            new TokenAmount(
+              await invoker.getErc20TokenBalance(web3, CELT.address, address),
+              18
+            )
+          )
+        }
+      }
     },
     switchToPreview() {
       const data: Transaction = {
@@ -447,6 +423,8 @@ export default Vue.extend({
         lastBlock: 0, //might not necessary
         chainFrom: this.sendTokenChain,
         chainTo: this.receiveTokenChain,
+        tokenFrom: this.currentTokenSend,
+        tokenTo: this.currentTokenReceive,
       }
       this.$store.commit('transactions/setPreview', data)
       this.$router.push('/review')
@@ -457,11 +435,6 @@ export default Vue.extend({
       this.inputChange()
     },
     setSend(index: number, chain: any) {
-      if (this.receiveTokenChain == chain) {
-        //@ts-ignore
-        this.receiveTokenChain = 137 == Number(chain) ? Chains.Ftm : Chains.Pol
-        this.receiveTokenIndex = 137 == Number(chain) ? 1 : 0
-      }
       this.sendTokenChain = chain
       this.sendTokenIndex = index
       this.inputChange()
@@ -472,9 +445,9 @@ export default Vue.extend({
         return
       }
       const currentPrice =
-        Number(this.amount) * this.prices[this.sendTokenChain]
+        Number(this.amount) * this.prices[this.currentTokenSend.address]
       this.amountReceive = (
-        currentPrice / this.prices[this.receiveTokenChain]
+        currentPrice / this.prices[this.currentTokenReceive.address]
       ).toFixed(4)
     },
     setMax() {

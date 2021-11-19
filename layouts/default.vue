@@ -13,7 +13,7 @@
     <mobile-stub />
 
     <vue-footer />
-    <message-windows class="hidden md:block" />
+    <message-windows class="md:block" />
     <modals-connect-wallet />
   </div>
 </template>

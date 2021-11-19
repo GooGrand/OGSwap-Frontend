@@ -1,12 +1,12 @@
 import { Connection, PublicKey } from '@solana/web3.js'
 import { Plugin } from '@nuxt/types'
-import { Chains } from '~/components/constants'
+import { Chains, RelayToken } from '~/components/constants'
 import Web3 from 'web3'
-import { get } from "lodash"
+import { get } from 'lodash'
 import { AbiItem } from 'web3-utils'
-import { ChainTypes } from '~/components/utils'
+import { ChainTypes, toPlainString } from '~/components/utils'
 import { MetamaskChain } from '~/web3/evm_chain'
-import { routerAddresses, contractsABI, wrappedNatives } from '~/web3/constants'
+import { routerAddresses, contractsABI, wrappedNatives, gtonOnChain } from '~/web3/constants'
 import {
   prepare_swap,
   transfer,
@@ -17,11 +17,11 @@ import {
 } from '~/utils/swap'
 import { setUpcomingTxn, sendDataToOracle } from '~/utils/oracle'
 import { getSwapOutAmount, GTON, NATIVE_SOL, TokenAmount } from '~/utils/tokens'
-import { gtonPoolInfo } from '~/utils/constants'
+import logger from '~/utils/logger'
 
 const { HttpProvider } = Web3.providers
 
-function createEvmInstance(endpoint: string): Web3 {
+export function createEvmInstance(endpoint: string): Web3 {
   return new Web3(new HttpProvider(endpoint))
 }
 function createMetamaskInstance(): Web3 {
@@ -41,6 +41,7 @@ declare module 'vue/types/vue' {
 
 type Web3Function = (params?: Object) => Promise<string> | null
 type Web3Network = (params?: Object) => Promise<Chains>
+type Web3Swap = (params?: Object) => Promise<Array<any>>
 
 interface FunctionPack {
   [ChainTypes.Evm]: any
@@ -48,7 +49,8 @@ interface FunctionPack {
 }
 
 interface Web3Invoker {
-  makeSwap(type: ChainTypes, params: Object): Web3Function
+  makeSwap(type: ChainTypes, params: Object): Web3Swap
+  makeOnchainSwap(type: ChainTypes, params: Object): Web3Swap;
   resolveCurrentAddress(type: ChainTypes): Web3Function
   getNetworkVersion(type: ChainTypes): Web3Network
   switchNetwork(chain: MetamaskChain): void
@@ -58,46 +60,86 @@ export interface RelaySwapData {
   destination: string
   userAddress: string
   addressTo: string
+  tokenTo: RelayToken
+  tokenFrom: RelayToken
   value: string
   chainId: Chains
 }
 
 function toHexString(byteArray: Uint8Array) {
-  var s = '0x';
-  byteArray.forEach(function(byte) {
-    s += ('0' + (byte & 0xFF).toString(16)).slice(-2);
-  });
-  return s;
+  var s = '0x'
+  byteArray.forEach(function (byte) {
+    s += ('0' + (byte & 0xff).toString(16)).slice(-2)
+  })
+  return s
 }
 
 function hexToBytes(hex: string) {
   for (var bytes = [], c = 0; c < hex.length; c += 2)
-      bytes.push(parseInt(hex.substr(c, 2), 16));
-  return bytes;
+    bytes.push(parseInt(hex.substr(c, 2), 16))
+  return bytes
+}
+
+async function makeOnchainSwapEvm(params: RelaySwapData): Promise<string> {
+  const { destination, addressTo, value, userAddress, chainId, tokenFrom, tokenTo } = params
+  const okexRouterAddress = "0xaaDF3BfaF9D9AEFaC31D25814dAc8DEF1a7e4438"
+  const web3 = createMetamaskInstance()
+  const contract = new web3.eth.Contract(
+    contractsABI.UniswapRouter as AbiItem[],
+    okexRouterAddress
+  )
+  const valueToSend = toPlainString(new TokenAmount(value, 18, false).toWei().toNumber())
+  const path = [tokenFrom.address, gtonOnChain[chainId], tokenTo.address]
+  let firstTxn
+  if (tokenFrom.native) {
+    firstTxn = await contract.methods
+    .swapExactETHForTokens(0, path, userAddress, 15000000000)
+    .send({ from: userAddress, value: valueToSend })
+  } else {
+    const tokenContract = new web3.eth.Contract(
+      contractsABI.ERC20ABI as AbiItem[],
+      tokenFrom.address
+    )
+    const approve = await tokenContract.methods.approve(okexRouterAddress, valueToSend).send({ from: userAddress });
+    firstTxn = await contract.methods
+    .swapExactTokensForETH(valueToSend,0, path, userAddress, 15000000000)
+    .send({ from: userAddress })
+  }
+  return firstTxn
 }
 
 async function makeSwapEvm(params: RelaySwapData): Promise<string> {
-  console.log(params);
-  const { destination, addressTo, value, userAddress, chainId } = params
-  const valueToSend = new TokenAmount(value, 18, false).toWei().toString();
-  console.log(valueToSend);
-  const receiveTokenAddress = hexToBytes(wrappedNatives[destination]);
+  const { destination, addressTo, value, userAddress, chainId, tokenFrom, tokenTo } = params
+  const valueToSend = toPlainString(new TokenAmount(value, 18, false).toWei().toNumber())
+  const receiveTokenAddress = hexToBytes(tokenTo.address.substring(2))
   const bytes = hexToBytes(addressTo.substring(2)).concat(receiveTokenAddress)
   //@ts-ignore
   const contractAddress = routerAddresses[chainId]
+  const path = [tokenFrom.address, gtonOnChain[chainId]]
+  
   const web3 = createMetamaskInstance()
   const contract = new web3.eth.Contract(
     contractsABI.OgRouter as AbiItem[],
     contractAddress
   )
-  const firstTxn = await contract.methods
-    .crossChainFromEth(0, destination, valueToSend, bytes)
-    .send({ from: userAddress, value: valueToSend })
-  const secondTxn = await sendDataToOracle(firstTxn, Number(destination))
-  // @ts-ignore
-  return {firstTxn, secondTxn}
+  let firstTxn
+  if (tokenFrom.native) {
+    firstTxn = await contract.methods
+      .crossChainFromEth(0, destination, 0, path, bytes)
+      .send({ from: userAddress, value: valueToSend })
+  } else {
+    const tokenContract = new web3.eth.Contract(
+      contractsABI.ERC20ABI as AbiItem[],
+      tokenFrom.address
+    )
+    const approve = await tokenContract.methods.approve(contractAddress, valueToSend).send({ from: userAddress });
+    firstTxn = await contract.methods
+    .crossChain (0, destination, valueToSend, 0, userAddress, path, bytes)
+    .send({ from: userAddress })
+  }
+  return firstTxn.transactionHash
 }
-async function makeSwapSol(params: RelaySwapData): Promise<string> {
+async function makeSwapSol(params: RelaySwapData): Promise<Array<any>> {
   const { destination, addressTo, value, userAddress, chainId } = params
   const endpoint = 'https://solana-api.projectserum.com'
   const connection = createSolInstance(endpoint)
@@ -110,9 +152,12 @@ async function makeSwapSol(params: RelaySwapData): Promise<string> {
   const baseMint = GTON.mintAddress
   const quoteMint = NATIVE_SOL.mintAddress
   const data = await getTokenAccounts(connection, owner)
-  const baseAccount = get(data.tokenAccounts, `${baseMint}.tokenAccountAddress`)// from token user account
-  const quoteAccount = get(data.tokenAccounts, `${quoteMint}.tokenAccountAddress`) // to token user account
-  const toCoinWithSlippage = getSwapOutAmount( 
+  const baseAccount = get(data.tokenAccounts, `${baseMint}.tokenAccountAddress`) // from token user account
+  const quoteAccount = get(
+    data.tokenAccounts,
+    `${quoteMint}.tokenAccountAddress`
+  ) // to token user account
+  const toCoinWithSlippage = getSwapOutAmount(
     poolInfo,
     quoteMint,
     baseMint,
@@ -130,20 +175,16 @@ async function makeSwapSol(params: RelaySwapData): Promise<string> {
     value,
     toCoinWithSlippage.amountOutWithSlippage.fixed()
   )
-  txn.recentBlockhash = (
-    await connection.getRecentBlockhash()
-  ).blockhash;
-  txn.feePayer = owner;
+  txn.recentBlockhash = (await connection.getRecentBlockhash()).blockhash
+  txn.feePayer = owner
   if (signers.length > 0) {
     for (const signer of signers) {
       txn.sign(signer)
     }
   }
   const signedTxn = await window.solana.signTransaction(txn)
-  console.log(signedTxn); // we need this to debug
   //@ts-ignores
   const txnId = await connection.sendRawTransaction(signedTxn.serialize())
-  console.log(txnId)
   const provider = setupAnchorProvider(connection, window.solana)
   const transferData = prepareDataForTransfer(
     addressTo,
@@ -160,7 +201,7 @@ async function makeSwapSol(params: RelaySwapData): Promise<string> {
   } catch (e) {
     console.log(e)
   }
-  return transferTxnId
+  return [transferTxnId, toCoinWithSlippage.amountOutWithSlippage.fixed()]
 }
 
 async function resolveAdrressEvm(): Promise<string> {
@@ -192,13 +233,18 @@ async function getNetworkVersionEvm(): Promise<number> {
 }
 
 async function resolveAdrressSol(): Promise<string> {
-  if(!window.solana.publicKey) return ""
+  if (!window.solana.publicKey) return ''
   return window.solana.publicKey.toString()
 }
 
 const makeSwap: FunctionPack = {
   [ChainTypes.Evm]: makeSwapEvm,
   [ChainTypes.Solana]: makeSwapSol,
+}
+
+const makeOnchainSwap: FunctionPack = {
+  [ChainTypes.Evm]: makeOnchainSwapEvm,
+  [ChainTypes.Solana]: async () => '',
 }
 
 const resolveAddress: FunctionPack = {
@@ -215,6 +261,11 @@ const invoker: Web3Invoker = {
   makeSwap(type: ChainTypes, params: Object) {
     return async function () {
       return makeSwap[type](params)
+    }
+  },
+  makeOnchainSwap(type: ChainTypes, params: Object) {
+    return async function () {
+      return makeOnchainSwap[type](params)
     }
   },
   resolveCurrentAddress(type: ChainTypes) {

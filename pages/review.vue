@@ -126,19 +126,14 @@
 <script lang="ts">
 import Vue from 'vue'
 import { Transaction } from '~/utils/transactions'
-import { Chains, chainToName, RelayToken, tokens } from '~/components/constants'
+import {
+  Chains,
+  chainToName,
+  RelayToken,
+  tokens,
+  logos,
+} from '~/components/constants'
 import { RelaySwapData } from '~/web3/metamask'
-const logos: { [key in Chains]: string } = {
-  [Chains.Ftm]: require('~/assets/img/logotypes/fantom.svg'),
-  [Chains.Bsc]: require('~/assets/img/logotypes/binance.svg'),
-  [Chains.Eth]: require('~/assets/img/logotypes/ethereum.svg'),
-  [Chains.Pol]: require('~/assets/img/logotypes/matic.svg'),
-  [Chains.Xdai]: require('~/assets/img/logotypes/xdai.svg'),
-  [Chains.Heco]: require('~/assets/img/logotypes/huobi.svg'),
-  [Chains.Avax]: require('~/assets/img/logotypes/huobi.svg'),
-  // [Chains.Sol]: require('~/assets/img/logotypes/solana.svg'),
-  [Chains.Okex]: require('~/assets/img/logotypes/okex.svg'),
-}
 
 export default Vue.extend({
   data: () => ({
@@ -152,10 +147,12 @@ export default Vue.extend({
       return Number(this.amount || 0) > 1000 || Number(this.amount || 0) < 0
     },
     fromToken(): RelayToken {
-      return tokens[this.preview.chainFrom]
+      // @ts-ignore
+      return this.preview.tokenFrom
     },
     toToken(): RelayToken {
-      return tokens[this.preview.chainTo]
+      // @ts-ignore
+      return this.preview.tokenTo
     },
     preview(): Transaction {
       return this.$store.getters['transactions/getPreview']
@@ -170,15 +167,37 @@ export default Vue.extend({
   methods: {
     async makeSwap() {
       this.processing = true
-      const txnId = await this.$web3
-        .makeSwap(this.fromToken.type, {
-          destination: this.toToken.chain,
-          userAddress: this.preview.fromAddress,
-          addressTo: this.preview.toAddress,
-          value: this.preview.amountFrom,
-          chainId: this.preview.chainFrom,
-        } as RelaySwapData)
-        .call(this)
+      let txnId
+      if (this.preview.tokenTo.chain == this.preview.tokenFrom.chain) {
+        txnId = await this.$web3
+          .makeOnchainSwap(this.fromToken.type, {
+            tokenTo: this.preview.tokenTo,
+            tokenFrom: this.preview.tokenFrom,
+            destination: this.toToken.chain,
+            userAddress: this.preview.fromAddress,
+            addressTo: this.preview.toAddress,
+            value: this.preview.amountFrom,
+            chainId: this.preview.chainFrom,
+          } as RelaySwapData)
+          .call(this)
+      } else {
+        const id = await this.$store.dispatch('transactions/startSwap')
+        txnId = await this.$web3
+          .makeSwap(this.fromToken.type, {
+            tokenTo: this.preview.tokenTo,
+            tokenFrom: this.preview.tokenFrom,
+            destination: this.toToken.chain,
+            userAddress: this.preview.fromAddress,
+            addressTo: this.preview.toAddress,
+            value: this.preview.amountFrom,
+            chainId: this.preview.chainFrom,
+          } as RelaySwapData)
+          .call(this)
+        this.$store.commit('transactions/update', {
+          txnIndex: id,
+          body: { firstTxnHash: txnId },
+        })
+      }
     },
   },
 })
