@@ -64,8 +64,16 @@
         <div class="mb-[16px]">
           <field-label>Send</field-label>
           <div class="relative">
-            <coin-item class="absolute left-[12px] top-1/2 -translate-y-1/2" :label="fromToken.title" :img="fromToken.img"/>
-            <field-input readonly :value="Number(preview.amountFrom).toFixed(4)" class="text-right rounded-[10px] text-[18px]" />
+            <coin-item
+              class="absolute left-[12px] top-1/2 -translate-y-1/2"
+              :label="fromToken.title"
+              :img="fromToken.img"
+            />
+            <field-input
+              readonly
+              :value="Number(preview.amountFrom).toFixed(4)"
+              class="text-right rounded-[10px] text-[18px]"
+            />
           </div>
         </div>
 
@@ -77,8 +85,16 @@
         <div class="mb-[16px]">
           <field-label>Receive</field-label>
           <div class="relative">
-            <coin-item class="absolute left-[12px] top-1/2 -translate-y-1/2" :label="toToken.title" :img="toToken.img"/>
-            <field-input readonly :value="Number(preview.amountTo).toFixed(4)" class="text-right rounded-[10px] text-[18px]" />
+            <coin-item
+              class="absolute left-[12px] top-1/2 -translate-y-1/2"
+              :label="toToken.title"
+              :img="toToken.img"
+            />
+            <field-input
+              readonly
+              :value="Number(preview.amountTo).toFixed(4)"
+              class="text-right rounded-[10px] text-[18px]"
+            />
             <!-- <field-input readonly value="10.0000 | $10,00.3469" class="text-right rounded-[10px] text-[18px]" /> -->
           </div>
         </div>
@@ -100,7 +116,9 @@
         </div>
       </div>
 
-      <btn class="mt-4" block :disabled="processing" @click="makeSwap"> Swap </btn>
+      <btn class="mt-4" block :disabled="processing" @click="makeSwap">
+        Swap
+      </btn>
     </angle-card>
   </div>
 </template>
@@ -119,7 +137,7 @@ const logos: { [key in Chains]: string } = {
   [Chains.Heco]: require('~/assets/img/logotypes/huobi.svg'),
   [Chains.Avax]: require('~/assets/img/logotypes/huobi.svg'),
   // [Chains.Sol]: require('~/assets/img/logotypes/solana.svg'),
-  [Chains.Okex]: require('~/assets/img/logotypes/okex.png'),
+  [Chains.Okex]: require('~/assets/img/logotypes/okex.svg'),
 }
 
 export default Vue.extend({
@@ -127,7 +145,7 @@ export default Vue.extend({
     address: '',
     amount: '0',
     connected: false,
-    processing: false
+    processing: false,
   }),
   computed: {
     isError(): boolean {
@@ -151,15 +169,17 @@ export default Vue.extend({
   },
   methods: {
     async makeSwap() {
-      this.processing = true;
-      const txnId = await this.$web3.makeSwap(this.fromToken.type, {
-        destination: this.toToken.chain,
-        userAddress: this.preview.fromAddress,
-        addressTo: this.preview.toAddress,
-        value: this.preview.amountFrom,
-        chainId: this.preview.chainFrom
-      } as RelaySwapData).call(this)
-    }
-  }
+      this.processing = true
+      const txnId = await this.$web3
+        .makeSwap(this.fromToken.type, {
+          destination: this.toToken.chain,
+          userAddress: this.preview.fromAddress,
+          addressTo: this.preview.toAddress,
+          value: this.preview.amountFrom,
+          chainId: this.preview.chainFrom,
+        } as RelaySwapData)
+        .call(this)
+    },
+  },
 })
 </script>
