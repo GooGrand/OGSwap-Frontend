@@ -39,11 +39,12 @@ export interface Token {
 }
 
 interface ApiInterface {
+  gtonPrice(): Promise<number>
   getTokens(chain: string | null): Promise<Token[]>
   sendTxnToProvisor(txn: string, from: number): Promise<string | null>
 }
 const baseCache = 'https://cache.api.graviton.one/'
-
+const coingeckoApi = "https://api.coingecko.com/api/v3/coins/";
 declare module 'vue/types/vue' {
   interface Vue {
     $api: ApiInterface
@@ -53,12 +54,24 @@ declare module 'vue/types/vue' {
 const api: ApiInterface = {
   async getTokens(chain: string | null): Promise<Token[]> {
     try {
-      const res = await fetch(baseCache + "/apiv2/ogs/get_by_chain?chain_name="+chain);
+      const res = await fetch(baseCache + "apiv2/ogs/get_by_chain?chain_name="+chain);
       const arr = await res.json()
       return arr
     } catch (e) {
       logger(e)
       return [] as Token[]
+    }
+
+  },
+  async gtonPrice(): Promise<number> {
+    try {
+      // @TODO rewrite to our backend service
+      const res = await fetch(coingeckoApi + "graviton");
+      const body = await res.json();
+      return body.market_data.current_price.usd;
+    } catch (e) {
+      logger(e)
+      return 0
     }
 
   },

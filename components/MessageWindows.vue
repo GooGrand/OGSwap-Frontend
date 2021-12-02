@@ -6,8 +6,8 @@
       :txnindex="index"
       :txn="item"
       :collapsed="index !== indexOpen"
-      @collapse="handleCollapse(index)"
       :completed="Boolean(item.firstTxnHash) && Boolean(item.secondTxnHash)"
+      @collapse="handleCollapse(index)"
       @close="deleteTxn(index)"
     >
       <div class="mb-[18px] flex justify-center pt-[5px]">
@@ -28,7 +28,7 @@
         <div class="flex flex-col justify-center items-end flex-grow">
 
           <div class="flex flex-col justify-center items-center">
-            <coin-item :label="tokens[item.chainFrom].title" :img="tokens[item.chainFrom].img" size="small" />
+            <coin-item :label="item.tokenFrom.token_meta.token_pair_name" :img="item.tokenFrom.token_meta.img" size="small" />
             <div class="text-sm whitespace-nowrap">
               {{item.amountFrom}}
             </div>
@@ -40,7 +40,7 @@
         <div class="flex flex-col justify-center items-start flex-grow">
 
           <div class="flex flex-col justify-center items-center">
-            <coin-item :label="tokens[item.chainTo].title" :img="tokens[item.chainTo].img" size="small" />
+            <coin-item :label="item.tokenTo.token_meta.token_pair_name" :img="item.tokenTo.token_meta.img" size="small" />
             <div class="text-sm whitespace-nowrap">
               ~{{item.amountTo}}
             </div>
@@ -74,13 +74,12 @@
 <script lang="ts">
 import Vue from 'vue'
 import { Transaction } from "~/utils/transactions"
-import {logos, tokens, explorers} from "~/components/constants"
+import {logos, explorers} from "~/components/constants"
 
 export default Vue.extend({
   data: () => ({
     indexOpen: 0 as number | null,
     logos,
-    tokens,
     explorers
   }),
   computed: {

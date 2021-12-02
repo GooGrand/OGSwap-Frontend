@@ -1,10 +1,11 @@
 import { AbiItem } from 'web3-utils'
 import Web3 from 'web3'
 import { relayAddresses, contractsABI, gtonOnChain } from './constants'
-import { Chains, RelayToken } from '~/components/constants'
+import { Chains } from '~/components/constants'
 import { MetamaskChain } from '~/web3/evm_chain'
 import { toPlainString } from '~/components/utils'
 import { TokenAmount } from '~/utils/safe-math'
+import { Token } from '~/plugins/api'
 
 function hexToBytes(hex: string) {
   let bytes
@@ -66,8 +67,8 @@ export interface RelaySwapData {
   destination: string
   userAddress: string
   addressTo: string
-  tokenTo: RelayToken
-  tokenFrom: RelayToken
+  tokenTo: Token
+  tokenFrom: Token
   value: string
   chainId: Chains
 }
@@ -110,25 +111,25 @@ export class Web3Invoker extends Invoker {
   }
 
   async makeOnchainSwapEvm(web3: Web3, params: RelaySwapData): Promise<string> {
-    const { destination, addressTo, value, userAddress, chainId, tokenFrom, tokenTo } = params
+    const { value, userAddress, chainId, tokenFrom, tokenTo } = params
     const okexRouterAddress = "0xaaDF3BfaF9D9AEFaC31D25814dAc8DEF1a7e4438"
     const contract = new web3.eth.Contract(
       contractsABI.UniswapRouter as AbiItem[],
       okexRouterAddress
     )
     const valueToSend = toPlainString(new TokenAmount(value, 18, false).toWei().toNumber())
-    const path = [tokenFrom.address, gtonOnChain[chainId], tokenTo.address]
+    const path = [tokenFrom.token_address, gtonOnChain[chainId], tokenTo.token_address]
     let firstTxn
-    if (tokenFrom.native) {
+    if (tokenFrom.token_meta.native) {
       firstTxn = await contract.methods
         .swapExactETHForTokens(0, path, userAddress, 15000000000)
         .send({ from: userAddress, value: valueToSend })
     } else {
       const tokenContract = new web3.eth.Contract(
         contractsABI.ERC20ABI as AbiItem[],
-        tokenFrom.address
+        tokenFrom.token_address
       )
-      const approve = await tokenContract.methods.approve(okexRouterAddress, valueToSend).send({ from: userAddress });
+      await tokenContract.methods.approve(okexRouterAddress, valueToSend).send({ from: userAddress });
       firstTxn = await contract.methods
         .swapExactTokensForETH(valueToSend, 0, path, userAddress, 15000000000)
         .send({ from: userAddress })
@@ -139,27 +140,27 @@ export class Web3Invoker extends Invoker {
   async makeSwapEvm(web3: Web3, params: RelaySwapData): Promise<string> {
     const { destination, addressTo, value, userAddress, chainId, tokenFrom, tokenTo } = params
     const valueToSend = toPlainString(new TokenAmount(value, 18, false).toWei().toNumber())
-    const receiveTokenAddress = hexToBytes(tokenTo.address.substring(2))
+    const receiveTokenAddress = hexToBytes(tokenTo.token_address.substring(2))
     const bytes = hexToBytes(addressTo.substring(2)).concat(receiveTokenAddress)
-    //@ts-ignore
+    // @ts-ignore
     const contractAddress = routerAddresses[chainId]
-    const path = [tokenFrom.address, gtonOnChain[chainId]]
+    const path = [tokenFrom.token_address, gtonOnChain[chainId]]
 
     const contract = new web3.eth.Contract(
       contractsABI.OgRouter as AbiItem[],
       contractAddress
     )
     let firstTxn
-    if (tokenFrom.native) {
+    if (tokenFrom.token_meta.native) {
       firstTxn = await contract.methods
         .crossChainFromEth(0, destination, 0, path, bytes)
         .send({ from: userAddress, value: valueToSend })
     } else {
       const tokenContract = new web3.eth.Contract(
         contractsABI.ERC20ABI as AbiItem[],
-        tokenFrom.address
+        tokenFrom.token_address
       )
-      const approve = await tokenContract.methods.approve(contractAddress, valueToSend).send({ from: userAddress });
+      await tokenContract.methods.approve(contractAddress, valueToSend).send({ from: userAddress });
       firstTxn = await contract.methods
         .crossChain(0, destination, valueToSend, 0, userAddress, path, bytes)
         .send({ from: userAddress })

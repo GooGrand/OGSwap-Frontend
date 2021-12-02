@@ -1,8 +1,6 @@
 import { cloneDeep } from 'lodash'
 import Vue from 'vue'
 import { Commit, GetterTree, ActionTree } from 'vuex'
-import { Chains } from '~/components/constants'
-import { TokenAmount } from '~/utils/safe-math'
 import { Transaction, emptyPreview } from '~/utils/transactions'
 
 type State = {

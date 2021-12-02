@@ -97,11 +97,8 @@
 <script lang="ts">
 import Vue from 'vue'
 import { Transaction } from '~/utils/transactions'
+import {Token} from "~/plugins/api"
 import {
-  Chains,
-  chainToName,
-  RelayToken,
-  tokens,
   logos,
 } from '~/components/constants'
 import { RelaySwapData, Web3Invoker } from '~/web3/metamask'
@@ -118,11 +115,11 @@ export default Vue.extend({
     isError(): boolean {
       return Number(this.amount || 0) > 1000 || Number(this.amount || 0) < 0
     },
-    fromToken(): RelayToken {
+    fromToken(): Token {
       // @ts-ignore
       return this.preview.tokenFrom
     },
-    toToken(): RelayToken {
+    toToken(): Token {
       // @ts-ignore
       return this.preview.tokenTo
     },
@@ -139,10 +136,10 @@ export default Vue.extend({
   methods: {
     async makeSwap() {
       this.processing = true
-      let txnId = await invoker.makeOnchainSwapEvm(this.$web3.mmWeb3(), {
+      await invoker.makeOnchainSwapEvm(this.$web3.mmWeb3(), {
             tokenTo: this.preview.tokenTo,
             tokenFrom: this.preview.tokenFrom,
-            destination: this.toToken.chain,
+            destination: String(this.toToken.chain_meta.chain_id),
             userAddress: this.preview.fromAddress,
             addressTo: this.preview.toAddress,
             value: this.preview.amountFrom,

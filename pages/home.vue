@@ -29,14 +29,11 @@
           </div>
           <div class="px-[6px] flex-grow">
             <field-label class="text-right">
-              <field-error-text v-show="isError && !isLimit" class="float-left">
+              <field-error-text v-show="isError" class="float-left">
                 Insufficient balance
               </field-error-text>
-              <field-error-text v-show="isLimit" class="float-left">
-                Amount is over the limit
-              </field-error-text>
               <span class="font-normal">Balance:</span>
-              {{ currentChainTokenBalance }} {{ currentChainTokenName }}
+              {{ balanceTokenFrom }} {{ currentChainTokenName }}
             </field-label>
             <div class="relative">
               <label class="block">
@@ -130,8 +127,8 @@
             <field-dropdown size="large" block>
               <template #default>
                 <coin-item
-                  :label="currentTokenReceive.title"
-                  :img="currentTokenReceive.img"
+                  :label="currentTokenReceive.pool_meta.token_pair_name"
+                  :img="currentTokenReceive.token_meta.img"
                   class="hover:font-bold"
                 />
               </template>
@@ -210,15 +207,26 @@ import Vue from "vue";
 import { Web3Invoker } from "~/web3/metamask";
 import { eventBus } from "~/global/main.js";
 import { TokenAmount } from "~/utils/safe-math";
-import { originTokens, destinationTokens, Chains, limits } from "~/components/constants";
+import { Chains } from "~/components/constants";
 import { WalletBody } from "~/store/types";
 import { WalletProvider } from "~/components/utils";
-import { Transaction } from "~/utils/transactions";
+import { Transaction, token } from "~/utils/transactions";
 import { availableChains } from "~/web3/evm_chain";
 import { Token } from "~/plugins/api";
 import { createEvmInstance } from "~/plugins/web3";
-
 const invoker = new Web3Invoker();
+
+function calculateTokenPairPrice(tokenData: Token, gtonPrice: number): string {
+      // token reserve / gton reserve * gton price
+    const tokenReserve = tokenData.token_a_address === tokenData.gton_address ? tokenData.reserve_b : tokenData.reserve_a
+    const token = new TokenAmount(tokenReserve, tokenData.token_meta.decimals)
+
+    const gtonReserve = tokenData.token_a_address === tokenData.gton_address ? tokenData.reserve_a : tokenData.reserve_b
+    const gton = new TokenAmount(gtonReserve, 18)
+
+    const res =  token.wei.dividedBy(gton.wei)
+    return new TokenAmount(res, tokenData.token_meta.decimals).toEther().multipliedBy(gtonPrice).toFixed(2)
+}
 
 export default Vue.extend({
   data: () => ({
@@ -228,15 +236,14 @@ export default Vue.extend({
     addressTo: "",
     amountReceive: "0",
     connected: false,
-    tokens: [] as Token[],
-    originTokens,
-    destinationTokens,
+    tokens: [token] as Token[],
     sendTokenIndex: 0,
-    receiveTokenIndex: 1,
+    receiveTokenIndex: 0,
     isSelecting: false,
     balanceTokenFrom: new TokenAmount(0),
     balanceTokenTo: new TokenAmount(0),
     availableChains,
+    gtonPrice: 0,
     currentChain: null as Chains | null,
   }),
   computed: {
@@ -247,35 +254,28 @@ export default Vue.extend({
       return this.tokens[this.receiveTokenIndex];
     },
     fromTokenPrice(): string {
-      if (!Number(this.amount) || !this.prices[this.currentTokenSend.address]) return "0";
-      return (Number(this.amount) * this.prices[this.currentTokenSend.address]).toFixed(
-        4
-      );
+      if (!Number(this.amount)) return "0";
+      return calculateTokenPairPrice(this.currentTokenSend, this.gtonPrice)
     },
     toTokenPrice(): string {
-      if (!Number(this.amountReceive) || !this.prices[this.currentTokenReceive.address])
+      if (!Number(this.amountReceive))
         return "0";
-      return (
-        Number(this.amountReceive) * this.prices[this.currentTokenReceive.address]
-      ).toFixed(4);
+      return calculateTokenPairPrice(this.currentTokenReceive, this.gtonPrice)
     },
     currentChainTokenName(): string {
-      return this.currentTokenSend.title;
+      return this.currentTokenSend.pool_meta.token_pair_name;
     },
     chainIndexName(): string {
       return this.currentTokenSend.chain_meta.chain_name;
     },
     isError(): boolean {
       return (
-        Number(this.amount || 0) > Number(this.currentChainTokenBalance) ||
+        Number(this.amount || 0) > Number(this.balanceTokenFrom.fixed(4)) ||
         Number(this.amount || 0) < 0
       );
     },
-    isLimit(): boolean {
-      return Number(this.amount) > limits[this.sendTokenChain];
-    },
     isValidChain(): boolean {
-      return this.isMetamaskAvailable && this.sendTokenChain === this.currentChain;
+      return this.isMetamaskAvailable && (String(this.currentTokenSend.chain_meta.chain_id) as Chains) === this.currentChain;
     },
     currentWallet(): WalletBody {
       return this.$store.getters["wallet/walletByName"](WalletProvider.Metamask);
@@ -301,17 +301,12 @@ export default Vue.extend({
   watch: {
     async currentWallet() {
       await this.setChain();
-      await this.setMMBalances();
     },
   },
   async mounted() {
     this.tokens = await this.$api.getTokens("PLG");
-    // await this.$store.dispatch('reserves/setReserves')
-    await this.setBalances();
+    this.gtonPrice = await this.$api.gtonPrice()
     await this.setChain();
-    await this.setPrices();
-
-    // достаем все данные из стора и начинаем проверку данных по последним изменениям баланса
   },
   methods: {
     switchToPreview() {
@@ -319,41 +314,41 @@ export default Vue.extend({
         id: 0,
         firstTxnHash: null,
         secondTxnHash: null,
-        lastBalance: Number(this.currentChainTokenBalance),
+        lastBalance: Number(this.balanceTokenTo),
         fromAddress: this.addressFrom ?? "",
         toAddress: this.addressTo,
         amountFrom: this.amount,
         amountTo: this.amountReceive,
         lastBlock: 0, // might not necessary
-        chainFrom: this.sendTokenChain,
-        chainTo: this.receiveTokenIndex,
+        chainFrom: String(this.currentTokenSend.chain_meta.chain_id) as Chains,
+        chainTo: String(this.currentTokenReceive.chain_meta.chain_id) as Chains,
         tokenFrom: this.currentTokenSend,
         tokenTo: this.currentTokenReceive,
       };
       this.$store.commit("transactions/setPreview", data);
       this.$router.push("/review");
     },
-    inputChange() {
+    async inputChange() {
       if (!this.amount) {
         this.amountReceive = "0.0000";
         return;
       }
       const amount = new TokenAmount(
         this.amount,
-        this.tokenFrom.token_meta.decimals,
+        this.currentTokenSend.token_meta.decimals,
         false
       ).toPlainString();
-      const amountOut = invoker.getAmountOut(
-        сreateEvmInstance(this.tokenFrom.rpc_url),
+      const amountOut = await invoker.getAmountOut(
+        createEvmInstance(this.currentTokenSend.rpc_url),
         amount, [
-        this.tokenFrom.token_address,
-        this.tokenFrom.gton_address,
-        this.tokenTo.token_address,
+        this.currentTokenSend.token_address,
+        this.currentTokenSend.gton_address,
+        this.currentTokenReceive.token_address,
       ]);
-      this.amountReceive = new TokenAmount(amountOut, this.tokenTo.token_meta.decimals).fixed(4)
+      this.amountReceive = new TokenAmount(amountOut, this.currentTokenReceive.token_meta.decimals).fixed(4)
     },
     setMax() {
-      this.amount = this.balanceTokenFrom.toPlainString();
+      this.amount = this.balanceTokenFrom.fixed(4);
     },
     handleConnectWallet() {
       const provider = WalletProvider.Metamask;
