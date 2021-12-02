@@ -343,11 +343,14 @@ export default Vue.extend({
         this.tokenFrom.token_meta.decimals,
         false
       ).toPlainString();
-      this.amountReceive = invoker.getAmountOut(amount, [
+      const amountOut = invoker.getAmountOut(
+        сreateEvmInstance(this.tokenFrom.rpc_url),
+        amount, [
         this.tokenFrom.token_address,
         this.tokenFrom.gton_address,
         this.tokenTo.token_address,
       ]);
+      this.amountReceive = new TokenAmount(amountOut, this.tokenTo.token_meta.decimals).fixed(4)
     },
     setMax() {
       this.amount = this.balanceTokenFrom.toPlainString();

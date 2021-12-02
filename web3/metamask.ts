@@ -75,6 +75,16 @@ export interface RelaySwapData {
 export class Web3Invoker extends Invoker {
   relayAddresses = relayAddresses
   contractsABI = contractsABI
+  routerAddress = ""
+
+  async getAmountOut(web3: Web3, amount: string, path: string[]) {
+    const contract = new web3.eth.Contract(
+      contractsABI.UniswapRouter as AbiItem[],
+      this.routerAddress
+    )
+    const res = await contract.methods.getAmountsOut(amount, path)
+    return res
+  }
 
   async getErc20TokenBalance(web3: Web3, tokenAddress: string, userAddress: string) {
     const contract = new web3.eth.Contract(
