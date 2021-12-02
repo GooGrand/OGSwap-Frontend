@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js'
-
+import {toPlainString} from "~/components/utils"
 // https://github.com/MikeMcl/bignumber.js
 // https://blog.csdn.net/shenxianhui1995/article/details/103985434
 export class TokenAmount {
@@ -18,9 +18,11 @@ export class TokenAmount {
       this.wei = new BigNumber(wei).multipliedBy(this._decimals)
     }
   }
+
   toString() {
     return this.toEther().toFixed(4)
   }
+
   toEther() {
     return this.wei.dividedBy(this._decimals)
   }
@@ -29,13 +31,17 @@ export class TokenAmount {
     return this.wei
   }
 
+  toPlainString() {
+    return toPlainString(this.wei.toNumber())
+  }
+
   format() {
     const vaule = this.wei.dividedBy(this._decimals)
     return vaule.toFormat(vaule.isInteger() ? 0 : this.decimals)
   }
 
-  fixed() {
-    return this.wei.dividedBy(this._decimals).toFixed(this.decimals)
+  fixed(digits: number = 18) {
+    return this.wei.dividedBy(this._decimals).toFixed(digits)
   }
 
   isNullOrZero() {

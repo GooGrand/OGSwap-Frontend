@@ -102,6 +102,7 @@ export default {
   // Plugins to run before rendering page: https://go.nuxtjs.dev/config-plugins
   plugins: [
     '@/plugins/web3.ts',
+    '@/plugins/api.ts',
     { src: '~/plugins/facebook.js', mode: 'client' },
     { src: '~/plugins/gtag.ts', mode: 'client' },
   ],

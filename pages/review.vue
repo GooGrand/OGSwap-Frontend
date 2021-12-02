@@ -1,8 +1,6 @@
 <template>
   <div class="flex-grow flex flex-col justify-center">
-    <angle-card
-      class="w-full max-w-[645px] mx-auto pt-[20px] pb-[24px] px-[40px]"
-    >
+    <angle-card class="w-full max-w-[645px] mx-auto pt-[20px] pb-[24px] px-[40px]">
       <div class="-mb-7 pt-2">
         <nuxt-link to="/home" class="underline hover:no-underline text-xs"
           ><icon
@@ -19,45 +17,20 @@
       <div class="rounded-[4px] bg-[#1C1C1C] pt-[22px] px-[28px] pb-[28px]">
         <div class="mb-[10px] flex justify-center">
           <div class="w-[140px] flex justify-end items-center">
-            <img
-              class="max-w-full h-auto max-h-[27px]"
-              :src="fromLogoUrl"
-              alt=""
-            />
+            <img class="max-w-full h-auto max-h-[27px]" :src="fromLogoUrl" alt="" />
           </div>
           <div class="w-[70px] flex justify-center items-center">
             <div
-              class="
-                text-black
-                bg-ghost-white
-                rounded-full
-                w-[33px]
-                h-[33px]
-                flex
-                justify-center
-                items-center
-              "
+              class="text-black bg-ghost-white rounded-full w-[33px] h-[33px] flex justify-center items-center"
             >
               <icon
                 name="mono/arrow-back"
-                class="
-                  fill-current
-                  w-[15px]
-                  h-[15px]
-                  rotate-180
-                  mr-[4px]
-                  relative
-                  left-[1px]
-                "
+                class="fill-current w-[15px] h-[15px] rotate-180 mr-[4px] relative left-[1px]"
               />
             </div>
           </div>
           <div class="w-[140px] flex justify-start items-center">
-            <img
-              class="max-w-full h-auto max-h-[27px]"
-              :src="toLogoUrl"
-              alt=""
-            />
+            <img class="max-w-full h-auto max-h-[27px]" :src="toLogoUrl" alt="" />
           </div>
         </div>
 
@@ -116,9 +89,7 @@
         </div>
       </div>
 
-      <btn class="mt-4" block :disabled="processing" @click="makeSwap">
-        Swap
-      </btn>
+      <btn class="mt-4" block :disabled="processing" @click="makeSwap"> Swap </btn>
     </angle-card>
   </div>
 </template>
@@ -126,15 +97,13 @@
 <script lang="ts">
 import Vue from 'vue'
 import { Transaction } from '~/utils/transactions'
+import {Token} from "~/plugins/api"
 import {
-  Chains,
-  chainToName,
-  RelayToken,
-  tokens,
   logos,
 } from '~/components/constants'
-import { RelaySwapData } from '~/web3/metamask'
+import { RelaySwapData, Web3Invoker } from '~/web3/metamask'
 
+const invoker = new Web3Invoker()
 export default Vue.extend({
   data: () => ({
     address: '',
@@ -146,11 +115,11 @@ export default Vue.extend({
     isError(): boolean {
       return Number(this.amount || 0) > 1000 || Number(this.amount || 0) < 0
     },
-    fromToken(): RelayToken {
+    fromToken(): Token {
       // @ts-ignore
       return this.preview.tokenFrom
     },
-    toToken(): RelayToken {
+    toToken(): Token {
       // @ts-ignore
       return this.preview.tokenTo
     },
@@ -167,38 +136,16 @@ export default Vue.extend({
   methods: {
     async makeSwap() {
       this.processing = true
-      let txnId
-      if (this.preview.tokenTo.chain == this.preview.tokenFrom.chain) {
-        txnId = await this.$web3
-          .makeOnchainSwap(this.fromToken.type, {
+      await invoker.makeOnchainSwapEvm(this.$web3.mmWeb3(), {
             tokenTo: this.preview.tokenTo,
             tokenFrom: this.preview.tokenFrom,
-            destination: this.toToken.chain,
+            destination: String(this.toToken.chain_meta.chain_id),
             userAddress: this.preview.fromAddress,
             addressTo: this.preview.toAddress,
             value: this.preview.amountFrom,
             chainId: this.preview.chainFrom,
           } as RelaySwapData)
-          .call(this)
-      } else {
-        const id = await this.$store.dispatch('transactions/startSwap')
-        txnId = await this.$web3
-          .makeSwap(this.fromToken.type, {
-            tokenTo: this.preview.tokenTo,
-            tokenFrom: this.preview.tokenFrom,
-            destination: this.toToken.chain,
-            userAddress: this.preview.fromAddress,
-            addressTo: this.preview.toAddress,
-            value: this.preview.amountFrom,
-            chainId: this.preview.chainFrom,
-          } as RelaySwapData)
-          .call(this)
-        this.$store.commit('transactions/update', {
-          txnIndex: id,
-          body: { firstTxnHash: txnId },
-        })
       }
-    },
   },
 })
 </script>

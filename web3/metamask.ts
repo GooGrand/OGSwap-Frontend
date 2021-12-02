@@ -1,11 +1,19 @@
 import { AbiItem } from 'web3-utils'
 import Web3 from 'web3'
+import { relayAddresses, contractsABI, gtonOnChain } from './constants'
+import { Chains } from '~/components/constants'
 import { MetamaskChain } from '~/web3/evm_chain'
+import { toPlainString } from '~/components/utils'
+import { TokenAmount } from '~/utils/safe-math'
+import { Token } from '~/plugins/api'
 
-import { relayAddresses, contractsABI } from './constants'
-import { Connection, PublicKey } from '@solana/web3.js'
-
-const endpoint = 'https://solana-api.projectserum.com'
+function hexToBytes(hex: string) {
+  let bytes
+  let c
+  for (bytes = [], c = 0; c < hex.length; c += 2)
+    bytes.push(parseInt(hex.substr(c, 2), 16))
+  return bytes
+}
 
 declare global {
   interface Window {
@@ -17,60 +25,41 @@ declare global {
 const { HttpProvider } = Web3.providers
 
 class Invoker {
-  // async switchMetamaskNetwork(chain: MetamaskChain) {
-  //   if (this.mobile) {
-  //     return;
-  //   }
-  //   let {
-  //     chainIdHex,
-  //     chainName,
-  //     rpcUrls,
-  //     nativeCurrency,
-  //     blockExplorerUrls
-  //   } = chain;
-  //   if (chainIdHex == this.ethereumChainId) {
-  //     await window.ethereum.request({
-  //       method: "wallet_switchEthereumChain",
-  //       params: [
-  //         {
-  //           chainId: chainIdHex
-  //         }
-  //       ]
-  //     });
-  //     return;
-  //   }
-
-  //   await window.ethereum.request({
-  //     method: "wallet_addEthereumChain",
-  //     params: [
-  //       {
-  //         chainId: chainIdHex,
-  //         chainName,
-  //         rpcUrls,
-  //         nativeCurrency,
-  //         blockExplorerUrls
-  //       }
-  //     ]
-  //   });
-  // }
-  async getNetworkVersion(mobile: boolean, web3: Web3) {
-    if (mobile) {
-      return await web3.eth.net.getId()
-    }
-    let res = await window.ethereum.request({ method: 'eth_chainId' })
-    return parseInt(res, 16)
-  }
-  async resolveCurrentAddress(mobile: boolean, web3: Web3) {
-    if (mobile) {
-      const accounts = await web3.eth.getAccounts()
-      return accounts[0].toLowerCase()
-    } else {
-      await window.ethereum.enable()
-      const addressList = await window.ethereum.request({
-        method: 'eth_accounts',
+  async switchNetwork(provider: any, chain: MetamaskChain) {
+    const { chainIdHex, chainName, rpcUrls, nativeCurrency, blockExplorerUrls } =
+      chain
+    if (chainIdHex === '0x1') {
+      await provider.request({
+        method: 'wallet_switchEthereumChain',
+        params: [
+          {
+            chainId: chainIdHex,
+          },
+        ],
       })
-      return addressList[0].toLowerCase()
+      return
     }
+    await provider.request({
+      method: 'wallet_addEthereumChain',
+      params: [
+        {
+          chainId: chainIdHex,
+          chainName,
+          rpcUrls,
+          nativeCurrency,
+          blockExplorerUrls,
+        },
+      ],
+    })
+  }
+
+  async getNetworkVersion(web3: Web3): Promise<Chains> {
+    return String(await web3.eth.net.getId()) as Chains
+  }
+
+  async resolveCurrentAddress(web3: Web3) {
+    const accounts = await web3.eth.getAccounts()
+    return accounts[0].toLowerCase()
   }
 }
 
@@ -78,49 +67,23 @@ export interface RelaySwapData {
   destination: string
   userAddress: string
   addressTo: string
+  tokenTo: Token
+  tokenFrom: Token
   value: string
-  chainId: string
+  chainId: Chains
 }
 
 export class Web3Invoker extends Invoker {
   relayAddresses = relayAddresses
   contractsABI = contractsABI
+  routerAddress = ""
 
-  // relay
-  async checkForTransaction(
-    fromBlock: number,
-    nodeUrl: string,
-    toAddress: string,
-    fromAddress: string
-  ): Promise<{ hash: string | null; block: number }> {
-    const web3 = new Web3(new HttpProvider(nodeUrl))
-    const toBlock = await this.getLastBlock(nodeUrl)
-    toAddress = toAddress.toLowerCase().substring(2)
+  async getAmountOut(web3: Web3, amount: string, path: string[]) {
     const contract = new web3.eth.Contract(
-      this.contractsABI.RelayContract as AbiItem[],
-      fromAddress
+      contractsABI.UniswapRouter as AbiItem[],
+      this.routerAddress
     )
-    const res = await contract.getPastEvents('DeliverRelay', {
-      filter: { user: toAddress },
-      fromBlock,
-      toBlock,
-    })
-    if (res.length > 0) return { hash: res[0].transactionHash, block: toBlock }
-    return { hash: null, block: toBlock }
-  }
-  // relay
-  async makeSwap(data: RelaySwapData, web3: Web3) {
-    const { destination, addressTo, value, userAddress, chainId } = data
-    //@ts-ignore
-    const contractAddress = this.relayAddresses[chainId]
-
-    const contract = new web3.eth.Contract(
-      this.contractsABI.RelayContract as AbiItem[],
-      contractAddress
-    )
-    const res = await contract.methods
-      .lock(destination, addressTo)
-      .send({ from: userAddress, value })
+    const res = await contract.methods.getAmountsOut(amount, path)
     return res
   }
 
@@ -133,7 +96,7 @@ export class Web3Invoker extends Invoker {
       .balanceOf(userAddress)
       .call()
     return res
-    
+
   }
 
   async getChainBalance(nodeUrl: string, address: string): Promise<number> {
@@ -142,15 +105,67 @@ export class Web3Invoker extends Invoker {
     return Number(web3.utils.fromWei(res))
   }
 
-  async getSolBalance(address: string): Promise<number> {
-    const conn = new Connection(endpoint)
-    const res = await conn.getBalance(new PublicKey(address))
-    return res;
-  }
-
   async getLastBlock(nodeUrl: string): Promise<number> {
     const web3 = new Web3(new HttpProvider(nodeUrl))
     return await web3.eth.getBlockNumber()
+  }
+
+  async makeOnchainSwapEvm(web3: Web3, params: RelaySwapData): Promise<string> {
+    const { value, userAddress, chainId, tokenFrom, tokenTo } = params
+    const okexRouterAddress = "0xaaDF3BfaF9D9AEFaC31D25814dAc8DEF1a7e4438"
+    const contract = new web3.eth.Contract(
+      contractsABI.UniswapRouter as AbiItem[],
+      okexRouterAddress
+    )
+    const valueToSend = toPlainString(new TokenAmount(value, 18, false).toWei().toNumber())
+    const path = [tokenFrom.token_address, gtonOnChain[chainId], tokenTo.token_address]
+    let firstTxn
+    if (tokenFrom.token_meta.native) {
+      firstTxn = await contract.methods
+        .swapExactETHForTokens(0, path, userAddress, 15000000000)
+        .send({ from: userAddress, value: valueToSend })
+    } else {
+      const tokenContract = new web3.eth.Contract(
+        contractsABI.ERC20ABI as AbiItem[],
+        tokenFrom.token_address
+      )
+      await tokenContract.methods.approve(okexRouterAddress, valueToSend).send({ from: userAddress });
+      firstTxn = await contract.methods
+        .swapExactTokensForETH(valueToSend, 0, path, userAddress, 15000000000)
+        .send({ from: userAddress })
+    }
+    return firstTxn
+  }
+
+  async makeSwapEvm(web3: Web3, params: RelaySwapData): Promise<string> {
+    const { destination, addressTo, value, userAddress, chainId, tokenFrom, tokenTo } = params
+    const valueToSend = toPlainString(new TokenAmount(value, 18, false).toWei().toNumber())
+    const receiveTokenAddress = hexToBytes(tokenTo.token_address.substring(2))
+    const bytes = hexToBytes(addressTo.substring(2)).concat(receiveTokenAddress)
+    // @ts-ignore
+    const contractAddress = routerAddresses[chainId]
+    const path = [tokenFrom.token_address, gtonOnChain[chainId]]
+
+    const contract = new web3.eth.Contract(
+      contractsABI.OgRouter as AbiItem[],
+      contractAddress
+    )
+    let firstTxn
+    if (tokenFrom.token_meta.native) {
+      firstTxn = await contract.methods
+        .crossChainFromEth(0, destination, 0, path, bytes)
+        .send({ from: userAddress, value: valueToSend })
+    } else {
+      const tokenContract = new web3.eth.Contract(
+        contractsABI.ERC20ABI as AbiItem[],
+        tokenFrom.token_address
+      )
+      await tokenContract.methods.approve(contractAddress, valueToSend).send({ from: userAddress });
+      firstTxn = await contract.methods
+        .crossChain(0, destination, valueToSend, 0, userAddress, path, bytes)
+        .send({ from: userAddress })
+    }
+    return firstTxn.transactionHash
   }
 }
 
@@ -163,6 +178,7 @@ export class Web3WalletConnector {
     }
     return false
   }
+
   async solEnabled(): Promise<boolean> {
     if (window.solana) {
       if (window.solana.isPhantom) {
