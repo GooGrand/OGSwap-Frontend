@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js'
-
+import {toPlainString} from "~/components/utils"
 // https://github.com/MikeMcl/bignumber.js
 // https://blog.csdn.net/shenxianhui1995/article/details/103985434
 export class TokenAmount {
@@ -18,15 +18,21 @@ export class TokenAmount {
       this.wei = new BigNumber(wei).multipliedBy(this._decimals)
     }
   }
+
   toString() {
     return this.toEther().toFixed(4)
   }
+
   toEther() {
     return this.wei.dividedBy(this._decimals)
   }
 
   toWei() {
     return this.wei
+  }
+
+  toPlainString() {
+    return toPlainString(this.wei.toNumber())
   }
 
   format() {

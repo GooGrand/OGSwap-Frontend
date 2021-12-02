@@ -94,7 +94,6 @@
 <script lang="ts">
 import { Transaction } from '~/utils/transactions'
 import Vue from 'vue'
-import { sendDataToOracle } from '~/utils/oracle'
 import { relayAddresses, chainProviderUrls } from '~/web3/constants'
 import { Web3Invoker } from '~/web3/metamask'
 import _ from 'lodash'
@@ -148,7 +147,7 @@ export default Vue.extend({
   methods: {
     async watchEvm() {
       if (!this.txn.firstTxnHash) return
-      const secondTxnHash = await sendDataToOracle(
+      const secondTxnHash = await this.$api.sendTxnToProvisor(
         this.txn.firstTxnHash,
         Number(this.txn.chainFrom)
       )

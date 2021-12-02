@@ -1,5 +1,4 @@
 import { Chains, RelayToken, FTM, CELT } from '~/components/constants'
-import { TokenAmount } from '~/utils/safe-math'
 
 export type Transaction = {
   id: number

@@ -3,25 +3,15 @@ import { WalletProvider } from '~/components/utils'
 
 export const state = () => ({
   modalData: {
-    // [WalletProvider.Phantom]: {
-    //   index: '1', // Индекс для перерисовки одного и того же модального окна
-    //   name: 'connect-wallet', // Уникальное название модального окна
-    //   data: {
-    //     label: 'Connect to Phantom',
-    //     img: require('~/assets/img/icons/phantom.svg'),
-    //     provider: WalletProvider.Phantom,
-    //     connected: false,
-    //   },
-    // },
     [WalletProvider.Metamask]: {
-      index: '2', // Индекс для перерисовки одного и того же модального окна
-      name: 'connect-wallet', // Уникальное название модального окна
+      index: '2', 
+      name: 'connect-wallet', 
       data: {
         label: 'Connect to MetaMask',
         img: require('~/assets/img/icons/metamask.svg'),
         provider: WalletProvider.Metamask,
         connected: false,
-      }, // Данные помещаемые в модальное окно
+      },
     },
   },
   modals: [],
@@ -37,11 +27,11 @@ export const state = () => ({
         label: 'About',
       },
       {
-        href: '/',
+        href: 'https://docs.ogswap.one/',
         label: 'Docs',
       },
       {
-        href: '/',
+        href: 'https://medium.com/@OGmultiswap',
         label: 'Blog',
       },
     ],
@@ -51,25 +41,25 @@ export const state = () => ({
         label: 'About',
       },
       {
-        href: '/home',
+        route: 'home',
         label: 'Swap',
       },
-      {
-        href: '/home',
-        label: 'Logs',
-      },
+      // {
+      //   href: '/home',
+      //   label: 'Logs',
+      // },
     ],
     socials: [
       {
         href: 'https://twitter.com/OGmultiswap',
         icon: 'mono/twitter',
       },
-      // {
-      //   href: '/',
-      //   icon: 'mono/medium',
-      // },
       {
-        href: '/',
+        href: 'https://medium.com/@OGmultiswap',
+        icon: 'mono/medium',
+      },
+      {
+        href: 'https://github.com/GTON-capital',
         icon: 'mono/github',
       },
       {
